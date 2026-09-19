@@ -48,13 +48,18 @@ export class Game {
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    // sneeuw slaat snel dicht naar egaal wit; iets onderbelichten houdt
+    // de tekening in het oppervlak zichtbaar
+    this.renderer.toneMappingExposure = 0.86;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     /* --- scène --- */
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.Fog(L.fog.color, L.fog.near, L.fog.far);
+    // exponentiële mist: dichtbij nauwelijks, veraf dicht. Dat geeft
+    // luchtperspectief — dingen op afstand verbleken geleidelijk in
+    // plaats van op één vaste afstand te verschijnen.
+    this.scene.fog = new THREE.FogExp2(L.fog.color, L.fog.density ?? 0.0105);
     this.scene.background = new THREE.Color(L.fog.color);
 
     this.camera = new THREE.PerspectiveCamera(62, 1, 0.1, 900);
@@ -68,11 +73,13 @@ export class Game {
     const sun = new THREE.DirectionalLight(L.light.sunColor, L.light.sunPower);
     sun.position.set(...L.light.sunPos);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.mapSize.set(2048, 2048);
+    // strakker kader om de speler heen: dezelfde schaduwkaart verdeeld
+    // over een kleiner gebied geeft veel scherpere randen
     const sc = sun.shadow.camera;
-    sc.left = -22; sc.right = 22; sc.top = 32; sc.bottom = -18; sc.near = 1; sc.far = 160;
-    sun.shadow.bias = -0.0012;
-    sun.shadow.normalBias = 0.035;
+    sc.left = -18; sc.right = 18; sc.top = 30; sc.bottom = -24; sc.near = 5; sc.far = 120;
+    sun.shadow.bias = -0.0008;
+    sun.shadow.normalBias = 0.022;
     sun.target.position.set(0, 0, -12);
     this.scene.add(sun, sun.target);
     this.sun = sun;
@@ -80,6 +87,7 @@ export class Game {
     /* --- wereld --- */
     this.props = new Props(L);
     this.track = new Track(this.scene, this.props, L);
+    this.track.buildEnvironment(this.renderer, this.scene);
     this.field = new ObstacleField(this.scene, this.props, L);
     this.particles = new Particles(this.scene, this.props);
     this.player = new Player(this.scene, this.props);
@@ -144,6 +152,15 @@ export class Game {
     this.renderer.shadowMap.enabled = this.highQuality;
     this.renderer.shadowMap.needsUpdate = true;
     this.sun.castShadow = this.highQuality;
+
+    // schaduwkaart opnieuw laten aanmaken op de nieuwe resolutie
+    const size = this.highQuality ? 2048 : 1024;
+    if (this.sun.shadow.mapSize.x !== size) {
+      this.sun.shadow.mapSize.set(size, size);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+    }
+
     this.track.setQuality(this.highQuality);
     this.resize();
   }
