@@ -419,6 +419,19 @@ button.primary:active, button.secondary:active { transform: translateY(1px); }
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+/* Muntje: credits gelden in élk level, dus geen vis of waterfles maar
+   een neutraal symbool. Getekend in CSS — scheelt een emoji die op
+   sommige systemen als leeg blokje uitkomt. */
+.coin {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe08a, #e0a227 60%, #a86f12);
+  box-shadow: inset 0 0 0 1px rgba(255, 240, 200, .5);
+  flex: 0 0 auto;
+}
+
 .purse.big {
   padding: 7px 14px;
   border: 1px solid var(--edge);
@@ -491,6 +504,9 @@ button.primary:active, button.secondary:active { transform: translateY(1px); }
 .item-note { color: var(--ink-dim); font-size: .72rem; margin-top: 2px; }
 
 .buy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   flex: 0 0 auto;
   padding: 8px 13px;
   border: 0;
