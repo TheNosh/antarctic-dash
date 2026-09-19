@@ -472,52 +472,224 @@ export class Props {
 
 /* ===========================================================
    De speler: een poolreiziger met parka en stormbril.
-   Losse ledematen zodat player.js ze kan animeren.
+
+   Het model wordt opgebouwd kijkend naar +z, maar de speler rent
+   naar -z. Daarom zit alles in een binnengroep `body` die een halve
+   slag gedraaid staat. De buitenste groep blijft vrij voor de
+   hellings- en draaianimatie in player.js.
+
+   Kleding: elk onderdeel heeft een eigen materiaal, en hoed en
+   schoenen hebben een "mount" waarin het model opnieuw wordt
+   opgebouwd zodra je iets anders aantrekt.
    =========================================================== */
+
+/** Bouwt het hoofddeksel; posities zijn in hoofd-coördinaten. */
+function buildHat(P, m, style) {
+  const parts = [];
+  const add = (geo, mat, o) => parts.push(P.mesh(geo, mat, o));
+
+  switch (style) {
+    case 'beanie':
+      add(P.geo.sphere, m.hat,     { y: 0.18, sx: 0.46, sy: 0.44, sz: 0.46 });
+      add(P.geo.cyl,    m.hatTrim, { y: 0.06, sx: 0.49, sy: 0.20, sz: 0.49 });
+      add(P.geo.sphere, m.hatTrim, { y: 0.46, sx: 0.20, sy: 0.20, sz: 0.20 });
+      break;
+
+    case 'cap':
+      add(P.geo.sphere, m.hat,     { y: 0.14, sx: 0.46, sy: 0.38, sz: 0.46 });
+      add(P.geo.box,    m.hatTrim, { y: 0.10, z: 0.40, sx: 0.46, sy: 0.07, sz: 0.40, rx: -0.12 });
+      break;
+
+    case 'ushanka':
+      add(P.geo.sphere, m.hat,     { y: 0.16, sx: 0.48, sy: 0.42, sz: 0.48 });
+      add(P.geo.cyl,    m.hatTrim, { y: 0.06, sx: 0.52, sy: 0.22, sz: 0.52 });
+      for (const s of [-1, 1]) {
+        add(P.geo.box,  m.hatTrim, { x: s * 0.42, y: -0.06, sx: 0.14, sy: 0.34, sz: 0.30, rz: s * 0.14 });
+      }
+      break;
+
+    case 'helmet':
+      add(P.geo.sphere, m.hat,     { y: 0.10, sx: 0.52, sy: 0.50, sz: 0.52 });
+      add(P.geo.box,    m.hatTrim, { y: 0.34, sx: 0.12, sy: 0.10, sz: 0.98 });
+      add(P.geo.box,    m.hat,     { y: -0.24, z: 0.02, sx: 0.50, sy: 0.09, sz: 0.44 });
+      break;
+
+    case 'crown':
+      add(P.geo.cyl,    m.hat,     { y: 0.30, sx: 0.46, sy: 0.20, sz: 0.46 });
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        add(P.geo.cone, m.hatTrim, {
+          x: Math.cos(a) * 0.21, y: 0.52, z: Math.sin(a) * 0.21,
+          sx: 0.14, sy: 0.30, sz: 0.14,
+        });
+      }
+      break;
+
+    default: // 'hood'
+      add(P.geo.sphere, m.hat,     { z: -0.06, sx: 0.52, sy: 0.54, sz: 0.52 });
+      add(P.geo.cyl,    m.hatTrim, { z: 0.10, sx: 0.50, sy: 0.16, sz: 0.50, rx: Math.PI / 2 });
+  }
+  return parts;
+}
+
+/** Bouwt één schoen; posities zijn in voet-coördinaten. */
+function buildShoe(P, m, style) {
+  const parts = [];
+  const add = (geo, mat, o) => parts.push(P.mesh(geo, mat, o));
+
+  add(P.geo.box, m.shoes, { z: 0.08, sx: 0.28, sy: 0.16, sz: 0.44 });
+
+  switch (style) {
+    case 'snowshoes':
+      add(P.geo.box, m.shoeTrim, { y: -0.10, z: 0.12, sx: 0.44, sy: 0.05, sz: 0.86 });
+      break;
+    case 'skates':
+      add(P.geo.box, m.shoeTrim, { y: -0.19, z: 0.06, sx: 0.05, sy: 0.22, sz: 0.62 });
+      break;
+    default: // 'boots'
+      add(P.geo.box, m.shoeTrim, { y: -0.09, z: 0.08, sx: 0.30, sy: 0.07, sz: 0.46 });
+  }
+  return parts;
+}
+
+/** Vervang de inhoud van een mount-groep. */
+function refill(mount, parts) {
+  mount.clear();
+  for (const p of parts) mount.add(p);
+}
 
 export function createRunner(props) {
   const P = props;
   const group = new THREE.Group();
 
+  // halve slag: het model kijkt hierdoor de renrichting in
+  const body = new THREE.Group();
+  body.rotation.y = Math.PI;
+  group.add(body);
+
+  // eigen materialen, zodat kleding verkleuren niets anders raakt
+  const mats = {
+    shirt:    new THREE.MeshStandardMaterial({ color: 0xff7a3c, roughness: 0.7 }),
+    accent:   new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.75 }),
+    pants:    new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.78 }),
+    shoes:    new THREE.MeshStandardMaterial({ color: 0x5b4a3b, roughness: 0.85 }),
+    shoeTrim: new THREE.MeshStandardMaterial({ color: 0x33291f, roughness: 0.85 }),
+    hat:      new THREE.MeshStandardMaterial({ color: 0xff7a3c, roughness: 0.75 }),
+    hatTrim:  new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.95 }),
+    skin:     P.mat.skin,
+    goggle:   P.mat.goggle,
+  };
+
   const torso = new THREE.Group();
   torso.position.y = 1.02;
-  group.add(torso);
+  body.add(torso);
 
-  torso.add(P.mesh(P.geo.capsule, P.mat.coat, { sx: 0.95, sy: 0.9, sz: 0.8 }));
-  torso.add(P.mesh(P.geo.box, P.mat.coatDark, { y: -0.1, sx: 0.78, sy: 0.22, sz: 0.62 })); // riem
-  // rugzak
-  torso.add(P.mesh(P.geo.box, P.mat.coatDark, { y: 0.05, z: -0.4, sx: 0.6, sy: 0.66, sz: 0.3 }));
+  torso.add(P.mesh(P.geo.capsule, mats.shirt, { sx: 0.95, sy: 0.9, sz: 0.8 }));
+  torso.add(P.mesh(P.geo.box, mats.accent, { y: -0.1, sx: 0.78, sy: 0.22, sz: 0.62 }));   // riem
+  torso.add(P.mesh(P.geo.box, mats.accent, { y: 0.05, z: -0.4, sx: 0.6, sy: 0.66, sz: 0.3 })); // rugzak
   torso.add(P.mesh(P.geo.box, P.mat.hazard, { y: 0.16, z: -0.57, sx: 0.4, sy: 0.16, sz: 0.06 }));
+
+  // reflecterende banden — alleen zichtbaar bij een gestreept shirt
+  const stripes = [
+    P.mesh(P.geo.box, mats.accent, { y: 0.12, sx: 0.70, sy: 0.13, sz: 0.60 }),
+    P.mesh(P.geo.box, mats.accent, { y: -0.26, sx: 0.66, sy: 0.11, sz: 0.57 }),
+  ];
+  for (const s of stripes) { s.visible = false; torso.add(s); }
 
   const head = new THREE.Group();
   head.position.y = 0.58;
   torso.add(head);
-  head.add(P.mesh(P.geo.sphere, P.mat.skin, { sx: 0.42, sy: 0.46, sz: 0.42 }));
-  head.add(P.mesh(P.geo.sphere, P.mat.coat, { z: -0.06, sx: 0.52, sy: 0.54, sz: 0.52 }));       // capuchon
-  head.add(P.mesh(P.geo.cyl, P.mat.fur, { z: 0.1, sx: 0.5, sy: 0.16, sz: 0.5, rx: Math.PI / 2 })); // bontrand
-  head.add(P.mesh(P.geo.box, P.mat.goggle, { y: 0.05, z: 0.2, sx: 0.5, sy: 0.17, sz: 0.14 }));  // stormbril
+  head.add(P.mesh(P.geo.sphere, mats.skin, { sx: 0.42, sy: 0.46, sz: 0.42 }));
+  head.add(P.mesh(P.geo.box, mats.goggle, { y: 0.05, z: 0.2, sx: 0.5, sy: 0.17, sz: 0.14 })); // stormbril
+
+  const hatMount = new THREE.Group();
+  head.add(hatMount);
 
   const arms = [];
   const legs = [];
   for (const s of [-1, 1]) {
     const arm = new THREE.Group();
     arm.position.set(s * 0.42, 0.22, 0);
-    arm.add(P.mesh(P.geo.capsule, P.mat.coat, { y: -0.28, sx: 0.42, sy: 0.6, sz: 0.42 }));
-    arm.add(P.mesh(P.geo.sphere, P.mat.coatDark, { y: -0.58, sx: 0.28, sy: 0.28, sz: 0.28 }));
+    arm.add(P.mesh(P.geo.capsule, mats.shirt, { y: -0.28, sx: 0.42, sy: 0.6, sz: 0.42 }));
+    arm.add(P.mesh(P.geo.sphere, mats.accent, { y: -0.58, sx: 0.28, sy: 0.28, sz: 0.28 }));
     torso.add(arm);
     arms.push(arm);
 
     const leg = new THREE.Group();
     leg.position.set(s * 0.21, -0.34, 0);
-    leg.add(P.mesh(P.geo.capsule, P.mat.coatDark, { y: -0.3, sx: 0.5, sy: 0.72, sz: 0.5 }));
-    leg.add(P.mesh(P.geo.box, P.mat.rock, { y: -0.66, z: 0.08, sx: 0.28, sy: 0.16, sz: 0.44 }));
+
+    const upper = P.mesh(P.geo.capsule, mats.pants, { y: -0.3, sx: 0.5, sy: 0.72, sz: 0.5 });
+    const shin = P.mesh(P.geo.capsule, mats.skin, { y: -0.48, sx: 0.34, sy: 0.4, sz: 0.34 });
+    shin.visible = false;
+    const footMount = new THREE.Group();
+    footMount.position.y = -0.66;
+
+    leg.add(upper, shin, footMount);
+    leg.userData = { upper, shin, footMount };
     torso.add(leg);
     legs.push(leg);
   }
 
+  const runner = { group, body, torso, head, arms, legs, mats, hatMount, stripes, props: P };
+
+  applyOutfit(runner, null);
   group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
 
-  return { group, torso, head, arms, legs };
+  return runner;
+}
+
+/**
+ * Trek een outfit aan. `outfit` is {hat, shirt, pants, shoes} met
+ * itemobjecten uit outfits.js; null valt terug op de standaardlook.
+ */
+export function applyOutfit(runner, outfit) {
+  const P = runner.props;
+  const m = runner.mats;
+
+  const o = outfit || {};
+  const hat   = o.hat   || { style: 'hood',   colors: { main: 0xff7a3c, trim: 0xf2efe6 } };
+  const shirt = o.shirt || { style: 'plain',  colors: { main: 0xff7a3c, accent: 0x2b3c55 } };
+  const pants = o.pants || { style: 'normal', colors: { main: 0x2b3c55 } };
+  const shoes = o.shoes || { style: 'boots',  colors: { main: 0x5b4a3b, trim: 0x33291f } };
+
+  /* -- shirt -- */
+  m.shirt.color.setHex(shirt.colors.main);
+  m.accent.color.setHex(shirt.colors.accent ?? 0x2b3c55);
+  for (const s of runner.stripes) s.visible = shirt.style === 'striped';
+
+  /* -- broek -- */
+  m.pants.color.setHex(pants.colors.main);
+  for (const leg of runner.legs) {
+    const { upper, shin } = leg.userData;
+    if (pants.style === 'shorts') {
+      upper.scale.set(0.54, 0.42, 0.54);
+      upper.position.y = -0.2;
+      shin.visible = true;
+    } else if (pants.style === 'puffy') {
+      upper.scale.set(0.62, 0.74, 0.62);
+      upper.position.y = -0.3;
+      shin.visible = false;
+    } else {
+      upper.scale.set(0.5, 0.72, 0.5);
+      upper.position.y = -0.3;
+      shin.visible = false;
+    }
+  }
+
+  /* -- schoenen -- */
+  m.shoes.color.setHex(shoes.colors.main);
+  m.shoeTrim.color.setHex(shoes.colors.trim ?? shoes.colors.main);
+  for (const leg of runner.legs) {
+    refill(leg.userData.footMount, buildShoe(P, m, shoes.style));
+  }
+
+  /* -- hoofddeksel -- */
+  m.hat.color.setHex(hat.colors.main);
+  m.hatTrim.color.setHex(hat.colors.trim ?? hat.colors.main);
+  refill(runner.hatMount, buildHat(P, m, hat.style));
+
+  // nieuwe onderdelen moeten ook schaduw werpen
+  runner.group.traverse((x) => { if (x.isMesh) x.castShadow = true; });
 }
 
 export { rand, pick };
