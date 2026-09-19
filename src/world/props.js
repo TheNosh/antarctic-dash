@@ -331,6 +331,11 @@ export class Props {
       icosa: new THREE.IcosahedronGeometry(0.5, 0),
       capsule: new THREE.CapsuleGeometry(0.34, 0.5, 4, 10),
       torus: new THREE.TorusGeometry(0.5, 0.12, 6, 14),
+      // eenheids-ledemaat: totale hoogte 2, straal 0.5.
+      // Schaal y met lengte/2 en x/z met straal/0.5.
+      limb: new THREE.CapsuleGeometry(0.5, 1.0, 4, 10),
+      // taps toelopende koker voor de parkazoom
+      hem: new THREE.CylinderGeometry(0.42, 0.5, 1, 14),
     };
   }
 
@@ -406,10 +411,12 @@ export class Props {
     const g = new THREE.Group();
     g.add(this.mesh(this.geo.box, this.mat.ice, { y: 1.9, sx: 11, sy: 1.7, sz: 1.5 }));
     g.add(this.mesh(this.geo.box, this.mat.snowSoft, { y: 2.8, sx: 11.2, sy: 0.22, sz: 1.7 }));
+    // pegels stoppen op y ≈ 0.95, net boven de glijhouding (top 0.89),
+    // zodat er niets door je rugzak heen prikt. De hitbox blijft 0.85.
     for (let i = 0; i < 16; i++) {
       g.add(this.mesh(this.geo.cone, this.mat.ice, {
-        x: rand(-5.2, 5.2), y: 1.0, z: rand(-0.5, 0.5),
-        sx: 0.15, sy: rand(0.12, 0.3), sz: 0.15, rx: Math.PI,
+        x: rand(-5.2, 5.2), y: 1.08, z: rand(-0.5, 0.5),
+        sx: 0.15, sy: rand(0.12, 0.26), sz: 0.15, rx: Math.PI,
       }));
     }
     // pilaren buiten de baan
@@ -813,6 +820,14 @@ function refill(mount, parts) {
   for (const p of parts) mount.add(p);
 }
 
+/**
+ * Hoogte van het heup-/rompscharnier boven de grond.
+ * De enkels liggen op y ≈ 0.02, dus dit is meteen de beenlengte + 0.02.
+ * Met deze waarde is ongeveer 42% van de totale lengte been — dicht
+ * genoeg bij een mens om niet als een blokje te lezen.
+ */
+export const TORSO_Y = 1.18;
+
 export function createRunner(props) {
   const P = props;
   const group = new THREE.Group();
@@ -836,31 +851,54 @@ export function createRunner(props) {
     glassTrim: new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.4, envMapIntensity: 0.9 }),
     pack:     new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.72, envMapIntensity: 0.6 }),
     packTrim: new THREE.MeshStandardMaterial({ color: 0xff8a4c, roughness: 0.65, envMapIntensity: 0.6 }),
+    // koude wangen — klein detail, maar het maakt het gezicht levend
+    blush:    new THREE.MeshStandardMaterial({ color: 0xe8a289, roughness: 0.7, envMapIntensity: 0.6 }),
     skin:     P.mat.skin,
     fur:      P.mat.fur,
   };
 
   const torso = new THREE.Group();
-  torso.position.y = 1.02;
+  torso.position.y = TORSO_Y;
   body.add(torso);
 
-  torso.add(P.mesh(P.geo.capsule, mats.shirt, { sx: 0.95, sy: 0.9, sz: 0.8 }));
-  torso.add(P.mesh(P.geo.box, mats.accent, { y: -0.1, sx: 0.78, sy: 0.22, sz: 0.62 }));   // riem
+  /* ---- romp: borstkas, taille en een korte parkazoom ----
+     De zoom stopt net onder de heup. Hangt hij lager, dan verdwijnen de
+     dijen eronder en lijkt het poppetje op stompjes te staan. */
+  torso.add(P.mesh(P.geo.capsule, mats.shirt, { y: 0.16, sx: 0.92, sy: 0.62, sz: 0.78 }));  // borst
+  torso.add(P.mesh(P.geo.capsule, mats.shirt, { y: -0.08, sx: 0.78, sy: 0.44, sz: 0.66 })); // taille
+  torso.add(P.mesh(P.geo.hem, mats.shirt, { y: -0.21, sx: 0.88, sy: 0.26, sz: 0.76 }));     // zoom
+  torso.add(P.mesh(P.geo.box, mats.accent, { y: -0.11, sx: 0.74, sy: 0.13, sz: 0.62 }));    // riem
+  torso.add(P.mesh(P.geo.box, mats.accent, { y: 0.14, z: 0.27, sx: 0.07, sy: 0.52, sz: 0.06 })); // rits
+  // schouderstukken maken de silhouetlijn breder en minder recht
+  for (const s of [-1, 1]) {
+    torso.add(P.mesh(P.geo.sphere, mats.shirt, { x: s * 0.34, y: 0.29, sx: 0.34, sy: 0.30, sz: 0.34 }));
+  }
 
   const packMount = new THREE.Group();
   torso.add(packMount);
 
   // reflecterende banden — alleen zichtbaar bij een gestreept shirt
   const stripes = [
-    P.mesh(P.geo.box, mats.accent, { y: 0.12, sx: 0.70, sy: 0.13, sz: 0.60 }),
-    P.mesh(P.geo.box, mats.accent, { y: -0.26, sx: 0.66, sy: 0.11, sz: 0.57 }),
+    P.mesh(P.geo.box, mats.accent, { y: 0.20, sx: 0.72, sy: 0.12, sz: 0.62 }),
+    P.mesh(P.geo.box, mats.accent, { y: -0.02, sx: 0.66, sy: 0.10, sz: 0.58 }),
   ];
   for (const s of stripes) { s.visible = false; torso.add(s); }
 
+  /* ---- kraag en hoofd ----
+     Een poolreiziger in een parka heeft geen zichtbare nek: het hoofd
+     komt direct uit de kraag. Die kraag dekt de naad tussen romp en
+     hoofd af. */
+  torso.add(P.mesh(P.geo.torus, mats.accent, { y: 0.40, sx: 0.54, sy: 0.54, sz: 0.62, rx: Math.PI / 2 }));
+
   const head = new THREE.Group();
-  head.position.y = 0.58;
+  head.position.y = 0.60;
   torso.add(head);
-  head.add(P.mesh(P.geo.sphere, mats.skin, { sx: 0.42, sy: 0.46, sz: 0.42 }));
+  head.add(P.mesh(P.geo.sphere, mats.skin, { sx: 0.42, sy: 0.47, sz: 0.43 }));
+  head.add(P.mesh(P.geo.sphere, mats.skin, { y: -0.14, z: 0.06, sx: 0.34, sy: 0.26, sz: 0.38 })); // kaak
+  head.add(P.mesh(P.geo.cone, mats.skin, { y: -0.02, z: 0.19, sx: 0.10, sy: 0.12, sz: 0.14, rx: Math.PI / 2 })); // neus
+  for (const s of [-1, 1]) {
+    head.add(P.mesh(P.geo.sphere, mats.blush, { x: s * 0.15, y: -0.06, z: 0.15, sx: 0.15, sy: 0.12, sz: 0.1 }));
+  }
 
   // brillen zitten ónder het hoofddeksel in de boom, zodat een muts
   // er overheen valt en niet andersom
@@ -870,27 +908,55 @@ export function createRunner(props) {
   const hatMount = new THREE.Group();
   head.add(hatMount);
 
+  /* ---- ledematen met gewrichten ----
+     Een arm of been is geen stok maar twee segmenten met een scharnier
+     ertussen. De bovenste groep draait in de schouder/heup, de
+     binnenste groep in de elleboog/knie. Dat verschil bepaalt of een
+     loopcyclus er levend uitziet of als een slingerende paal. */
   const arms = [];
   const legs = [];
+
   for (const s of [-1, 1]) {
+    /* -- arm: bovenarm 0.34, onderarm 0.30 -- */
     const arm = new THREE.Group();
-    arm.position.set(s * 0.42, 0.22, 0);
-    arm.add(P.mesh(P.geo.capsule, mats.shirt, { y: -0.28, sx: 0.42, sy: 0.6, sz: 0.42 }));
-    arm.add(P.mesh(P.geo.sphere, mats.accent, { y: -0.58, sx: 0.28, sy: 0.28, sz: 0.28 }));
+    arm.position.set(s * 0.40, 0.24, 0);
+    arm.add(P.mesh(P.geo.limb, mats.shirt, { y: -0.17, sx: 0.19, sy: 0.17, sz: 0.19 }));
+
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.34;
+    elbow.add(P.mesh(P.geo.sphere, mats.shirt, { sx: 0.19, sy: 0.19, sz: 0.19 }));           // elleboog
+    elbow.add(P.mesh(P.geo.limb, mats.shirt, { y: -0.15, sx: 0.165, sy: 0.15, sz: 0.165 })); // onderarm
+    // want met duim
+    elbow.add(P.mesh(P.geo.sphere, mats.accent, { y: -0.33, z: 0.02, sx: 0.23, sy: 0.25, sz: 0.21 }));
+    elbow.add(P.mesh(P.geo.sphere, mats.accent, { x: s * 0.09, y: -0.30, z: 0.04, sx: 0.1, sy: 0.14, sz: 0.1 }));
+    arm.add(elbow);
+
+    arm.userData = { elbow };
     torso.add(arm);
     arms.push(arm);
 
+    /* -- been: dij 0.44, scheen 0.40, enkel komt uit op y ≈ 0.02 -- */
     const leg = new THREE.Group();
-    leg.position.set(s * 0.21, -0.34, 0);
+    leg.position.set(s * 0.20, -0.32, 0);
 
-    const upper = P.mesh(P.geo.capsule, mats.pants, { y: -0.3, sx: 0.5, sy: 0.72, sz: 0.5 });
-    const shin = P.mesh(P.geo.capsule, mats.skin, { y: -0.48, sx: 0.34, sy: 0.4, sz: 0.34 });
-    shin.visible = false;
+    // blote benen zitten er altijd in, iets dunner; de broekspijp valt
+    // eroverheen. Bij een korte broek wordt die pijp simpelweg korter.
+    leg.add(P.mesh(P.geo.limb, mats.skin, { y: -0.22, sx: 0.245, sy: 0.22, sz: 0.245 }));
+    const thigh = P.mesh(P.geo.limb, mats.pants, { y: -0.22, sx: 0.27, sy: 0.22, sz: 0.27 });
+    leg.add(thigh);
+
+    const knee = new THREE.Group();
+    knee.position.y = -0.44;
+    const kneeBall = P.mesh(P.geo.sphere, mats.pants, { sx: 0.26, sy: 0.26, sz: 0.26 });
+    const shin = P.mesh(P.geo.limb, mats.pants, { y: -0.20, sx: 0.23, sy: 0.20, sz: 0.23 });
+    knee.add(kneeBall, shin);
+
     const footMount = new THREE.Group();
-    footMount.position.y = -0.66;
+    footMount.position.y = -0.40;
+    knee.add(footMount);
+    leg.add(knee);
 
-    leg.add(upper, shin, footMount);
-    leg.userData = { upper, shin, footMount };
+    leg.userData = { thigh, knee, kneeBall, shin, footMount };
     torso.add(leg);
     legs.push(leg);
   }
@@ -930,20 +996,25 @@ export function applyOutfit(runner, outfit) {
   /* -- broek -- */
   m.pants.color.setHex(pants.colors.main);
   for (const leg of runner.legs) {
-    const { upper, shin } = leg.userData;
-    if (pants.style === 'shorts') {
-      upper.scale.set(0.54, 0.42, 0.54);
-      upper.position.y = -0.2;
-      shin.visible = true;
+    const { thigh, shin, kneeBall } = leg.userData;
+    const bloot = pants.style === 'shorts';
+
+    if (bloot) {
+      thigh.scale.set(0.29, 0.12, 0.29);   // korte pijp
+      thigh.position.y = -0.12;
     } else if (pants.style === 'puffy') {
-      upper.scale.set(0.62, 0.74, 0.62);
-      upper.position.y = -0.3;
-      shin.visible = false;
+      thigh.scale.set(0.33, 0.22, 0.33);
+      thigh.position.y = -0.22;
     } else {
-      upper.scale.set(0.5, 0.72, 0.5);
-      upper.position.y = -0.3;
-      shin.visible = false;
+      thigh.scale.set(0.27, 0.22, 0.27);
+      thigh.position.y = -0.22;
     }
+
+    // bij een korte broek zijn knie en scheen huid in plaats van stof
+    shin.material = bloot ? m.skin : m.pants;
+    kneeBall.material = bloot ? m.skin : m.pants;
+    shin.scale.set(bloot ? 0.21 : 0.23, 0.20, bloot ? 0.21 : 0.23);
+    kneeBall.scale.setScalar(bloot ? 0.23 : 0.26);
   }
 
   /* -- schoenen -- */
