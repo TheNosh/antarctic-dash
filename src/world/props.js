@@ -192,8 +192,13 @@ function skyTexture(colors) {
   return tex;
 }
 
-/** Zacht uitlopend lichtgordijn (noorderlicht / zuiderlicht). */
+/**
+ * Zacht uitlopend lichtgordijn (noorderlicht / zuiderlicht).
+ * Zonder kleur geen gordijn — en vooral: geen uitzondering die het hele
+ * spel neerhaalt als een level dit veld leeg laat.
+ */
 function auroraTexture(color) {
+  if (!color) return null;
   const w = 256, h = 256;
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
@@ -318,6 +323,14 @@ export class Props {
       bone: new THREE.MeshStandardMaterial({ color: col.bone ?? 0xe6dcc2, roughness: 0.8, envMapIntensity: 0.4 }),
       chitin: new THREE.MeshStandardMaterial({ color: col.chitin ?? 0x4a2f1c, roughness: 0.32, envMapIntensity: 1.0 }),
       twig: new THREE.MeshStandardMaterial({ color: col.twig ?? 0x8a6a42, roughness: 0.9 }),
+
+      // jungle
+      moss: new THREE.MeshStandardMaterial({ color: col.moss ?? 0x5f9440, roughness: 0.95, envMapIntensity: 0.4 }),
+      hide: new THREE.MeshStandardMaterial({ color: col.hide ?? 0x4a3a2c, roughness: 0.55, envMapIntensity: 0.7 }),
+      fruit: new THREE.MeshStandardMaterial({
+        color: col.fruit ?? 0xf2c832, roughness: 0.4,
+        emissive: col.fruit ?? 0xf2c832, emissiveIntensity: 0.25,
+      }),
       flask: new THREE.MeshStandardMaterial({
         color: col.flask ?? 0x3fa9d8, roughness: 0.3,
         emissive: col.flask ?? 0x3fa9d8, emissiveIntensity: 0.35,
@@ -802,6 +815,226 @@ export class Props {
       }));
     }
     g.rotation.y = Math.random() * 3;
+    return g;
+  }
+
+  /* =====================================================
+     JUNGLE — level 3
+     ===================================================== */
+
+  /** Omgevallen boomstam — eroverheen springen. */
+  log() {
+    const g = new THREE.Group();
+    g.add(this.mesh(this.geo.cyl, this.mat.twig, { y: 0.45, sx: 0.9, sy: 2.4, sz: 0.9, rz: Math.PI / 2 }));
+    // jaarringen op de kopse kanten
+    for (const s of [-1, 1]) {
+      g.add(this.mesh(this.geo.cyl, this.mat.bone, { x: s * 1.2, y: 0.45, sx: 0.78, sy: 0.06, sz: 0.78, rz: Math.PI / 2 }));
+    }
+    // mosplekken
+    for (let i = 0; i < 5; i++) {
+      g.add(this.mesh(this.geo.lowSphere, this.mat.moss, {
+        x: rand(-1.0, 1.0), y: rand(0.55, 0.9), z: rand(-0.35, 0.35),
+        sx: rand(0.3, 0.6), sy: rand(0.12, 0.22), sz: rand(0.3, 0.5), ry: Math.random() * 3,
+      }));
+    }
+    return g;
+  }
+
+  /** Stam op schraaghoogte met lianen eraan — eronderdoor glijden. */
+  logBeam() {
+    const g = new THREE.Group();
+    g.add(this.mesh(this.geo.cyl, this.mat.twig, { y: 1.62, sx: 0.84, sy: 2.4, sz: 0.84, rz: Math.PI / 2 }));
+    for (const s of [-1, 1]) {
+      g.add(this.mesh(this.geo.cyl, this.mat.twig, { x: s * 1.05, y: 0.8, sx: 0.3, sy: 1.6, sz: 0.3 }));
+    }
+    // lianen die tot net boven glijhoogte hangen
+    for (let i = 0; i < 7; i++) {
+      const len = rand(0.35, 0.62);
+      g.add(this.mesh(this.geo.cyl, this.mat.plant, {
+        x: rand(-0.9, 0.9), y: 1.22 - len / 2, z: rand(-0.3, 0.3),
+        sx: 0.08, sy: len, sz: 0.08,
+      }));
+    }
+    return g;
+  }
+
+  /** Gordijn van lianen — eronderdoor glijden. */
+  vines() {
+    const g = new THREE.Group();
+    g.add(this.mesh(this.geo.cyl, this.mat.twig, { y: 2.95, sx: 0.36, sy: 2.4, sz: 0.36, rz: Math.PI / 2 }));
+    for (let i = 0; i < 9; i++) {
+      const len = rand(1.7, 2.0);
+      const x = rand(-1.0, 1.0);
+      g.add(this.mesh(this.geo.cyl, this.mat.plant, {
+        x, y: 2.9 - len / 2, z: rand(-0.35, 0.35), sx: 0.1, sy: len, sz: 0.1,
+      }));
+      // blaadjes onderaan
+      g.add(this.mesh(this.geo.lowSphere, this.mat.moss, {
+        x, y: 2.9 - len, z: 0, sx: 0.3, sy: 0.14, sz: 0.24, ry: Math.random() * 3,
+      }));
+    }
+    return g;
+  }
+
+  /** Dikke boom midden op de baan — alleen te ontwijken. */
+  treeTrunk() {
+    const g = new THREE.Group();
+    g.add(this.mesh(this.geo.cyl, this.mat.twig, { y: 1.6, sx: 1.5, sy: 3.2, sz: 1.5 }));
+    // steunwortels
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      g.add(this.mesh(this.geo.cone, this.mat.twig, {
+        x: Math.cos(a) * 0.5, y: 0.45, z: Math.sin(a) * 0.5,
+        sx: 0.5, sy: 0.9, sz: 0.5, rx: Math.sin(a) * 0.3, rz: -Math.cos(a) * 0.3,
+      }));
+    }
+    for (let i = 0; i < 4; i++) {
+      g.add(this.mesh(this.geo.lowSphere, this.mat.moss, {
+        x: rand(-0.6, 0.6), y: rand(0.4, 2.6), z: rand(-0.6, 0.6),
+        sx: rand(0.3, 0.6), sy: rand(0.3, 0.7), sz: rand(0.3, 0.6),
+      }));
+    }
+    g.add(this.mesh(this.geo.lowSphere, this.mat.plant, { y: 3.4, sx: 2.4, sy: 1.0, sz: 2.4 }));
+    return g;
+  }
+
+  /** Aap die dwars over de banen rent. */
+  monkey() {
+    const outer = new THREE.Group();
+    const g = new THREE.Group();
+    g.scale.setScalar(1.2);
+    outer.add(g);
+
+    g.add(this.mesh(this.geo.capsule, this.mat.chitin, { y: 0.44, sx: 0.85, sy: 0.85, sz: 1.15, rx: Math.PI / 2 }));
+    g.add(this.mesh(this.geo.sphere, this.mat.chitin, { y: 0.62, z: 0.52, sx: 0.46, sy: 0.44, sz: 0.44 }));
+    g.add(this.mesh(this.geo.sphere, this.mat.bone, { y: 0.56, z: 0.68, sx: 0.3, sy: 0.26, sz: 0.26 })); // snuit
+    for (const s of [-1, 1]) {
+      g.add(this.mesh(this.geo.sphere, this.mat.pEye, { x: s * 0.13, y: 0.68, z: 0.72, sx: 0.09, sy: 0.09, sz: 0.07 }));
+      g.add(this.mesh(this.geo.sphere, this.mat.chitin, { x: s * 0.42, y: 0.72, z: 0.46, sx: 0.2, sy: 0.22, sz: 0.1 })); // oren
+      // poten
+      g.add(this.mesh(this.geo.capsule, this.mat.chitin, { x: s * 0.28, y: 0.2, z: 0.3, sx: 0.22, sy: 0.4, sz: 0.22 }));
+      g.add(this.mesh(this.geo.capsule, this.mat.chitin, { x: s * 0.3, y: 0.2, z: -0.28, sx: 0.24, sy: 0.4, sz: 0.24 }));
+    }
+    // opkrullende staart
+    const staart = [[0.55, -0.6], [0.8, -0.85], [1.0, -0.72]];
+    for (const [y, z] of staart) {
+      g.add(this.mesh(this.geo.sphere, this.mat.chitin, { y, z, sx: 0.18, sy: 0.18, sz: 0.18 }));
+    }
+    return outer;
+  }
+
+  /** Wild zwijn dat op je af stormt. */
+  boar() {
+    const outer = new THREE.Group();
+    const g = new THREE.Group();
+    g.scale.setScalar(1.2);
+    outer.add(g);
+
+    g.add(this.mesh(this.geo.capsule, this.mat.hide, { y: 0.48, sx: 1.1, sy: 0.95, sz: 1.35, rx: Math.PI / 2 }));
+    g.add(this.mesh(this.geo.sphere, this.mat.hide, { y: 0.46, z: 0.66, sx: 0.55, sy: 0.5, sz: 0.5 }));
+    g.add(this.mesh(this.geo.sphere, this.mat.chitin, { y: 0.4, z: 0.86, sx: 0.3, sy: 0.26, sz: 0.24 }));  // snuit
+    // slagtanden
+    for (const s of [-1, 1]) {
+      g.add(this.mesh(this.geo.cone, this.mat.bone, { x: s * 0.2, y: 0.42, z: 0.9, sx: 0.1, sy: 0.3, sz: 0.1, rx: -0.6, rz: s * 0.4 }));
+      g.add(this.mesh(this.geo.sphere, this.mat.pEye, { x: s * 0.2, y: 0.6, z: 0.82, sx: 0.09, sy: 0.09, sz: 0.07 }));
+      g.add(this.mesh(this.geo.capsule, this.mat.hide, { x: s * 0.32, y: 0.2, z: 0.36, sx: 0.24, sy: 0.4, sz: 0.24 }));
+      g.add(this.mesh(this.geo.capsule, this.mat.hide, { x: s * 0.34, y: 0.2, z: -0.4, sx: 0.26, sy: 0.4, sz: 0.26 }));
+    }
+    // borstelkam
+    for (let i = 0; i < 5; i++) {
+      g.add(this.mesh(this.geo.cone, this.mat.chitin, {
+        y: 0.82, z: 0.35 - i * 0.22, sx: 0.1, sy: 0.26, sz: 0.1, rx: -0.3,
+      }));
+    }
+    // opstuivend blad
+    for (let i = 0; i < 5; i++) {
+      g.add(this.mesh(this.geo.lowSphere, this.mat.moss, {
+        x: rand(-0.5, 0.5), y: rand(0.05, 0.3), z: rand(-1.5, -0.8),
+        sx: rand(0.15, 0.3), sy: rand(0.06, 0.12), sz: rand(0.15, 0.3), shadow: false,
+      }));
+    }
+    return outer;
+  }
+
+  /** Tros bananen — het verzamelobject van de jungle. */
+  banana() {
+    const g = new THREE.Group();
+    for (let i = -1; i <= 1; i++) {
+      g.add(this.mesh(this.geo.capsule, this.mat.fruit, {
+        x: i * 0.13, y: 0, z: i * 0.05,
+        sx: 0.24, sy: 0.42, sz: 0.24, rz: i * 0.35 + 0.3, rx: 0.2,
+      }));
+    }
+    g.add(this.mesh(this.geo.cyl, this.mat.twig, { y: 0.26, sx: 0.12, sy: 0.16, sz: 0.12 }));
+    return g;
+  }
+
+  /* ---------- jungledecor ---------- */
+
+  /** Hoge oerwoudboom met bladerdek. */
+  jungleTree() {
+    const g = new THREE.Group();
+    const h = rand(8, 16);
+    const dik = rand(1.6, 2.6);
+    g.add(this.mesh(this.geo.cyl, this.mat.twig, { y: h / 2, sx: dik, sy: h, sz: dik }));
+    // steunwortels onderaan
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + Math.random();
+      g.add(this.mesh(this.geo.cone, this.mat.twig, {
+        x: Math.cos(a) * dik * 0.5, y: h * 0.12, z: Math.sin(a) * dik * 0.5,
+        sx: dik * 0.5, sy: h * 0.25, sz: dik * 0.5,
+        rx: Math.sin(a) * 0.25, rz: -Math.cos(a) * 0.25,
+      }));
+    }
+    // breed, gelaagd bladerdek
+    const kroon = 4 + ((Math.random() * 4) | 0);
+    for (let i = 0; i < kroon; i++) {
+      g.add(this.mesh(this.geo.lowSphere, this.mat.plant, {
+        x: rand(-3.5, 3.5), y: h + rand(-1.6, 2.2), z: rand(-3.5, 3.5),
+        sx: rand(4, 7.5), sy: rand(1.6, 3.2), sz: rand(4, 7.5), ry: Math.random() * 3,
+      }));
+    }
+    // hangende lianen uit de kroon
+    for (let i = 0; i < 3; i++) {
+      const len = rand(2, 5);
+      g.add(this.mesh(this.geo.cyl, this.mat.moss, {
+        x: rand(-2.5, 2.5), y: h - len / 2, z: rand(-2.5, 2.5),
+        sx: 0.14, sy: len, sz: 0.14,
+      }));
+    }
+    return g;
+  }
+
+  /** Varens en struiken. */
+  fernPatch() {
+    const g = new THREE.Group();
+    const n = 3 + ((Math.random() * 4) | 0);
+    for (let i = 0; i < n; i++) {
+      const x = rand(-3, 3), z = rand(-3, 3);
+      for (let k = 0; k < 5; k++) {
+        const a = (k / 5) * Math.PI * 2;
+        g.add(this.mesh(this.geo.cone, this.mat.plant, {
+          x: x + Math.cos(a) * 0.4, y: rand(0.4, 0.8), z: z + Math.sin(a) * 0.4,
+          sx: 0.4, sy: rand(1.0, 1.7), sz: 0.4,
+          rx: Math.sin(a) * 0.6, rz: -Math.cos(a) * 0.6,
+        }));
+      }
+    }
+    return g;
+  }
+
+  /** Verweerde tempelpilaar, half overwoekerd. */
+  ruinPillar() {
+    const g = new THREE.Group();
+    const h = rand(2.5, 6);
+    g.add(this.mesh(this.geo.box, this.mat.iceSolid, { y: h / 2, sx: 1.4, sy: h, sz: 1.4, ry: rand(-0.2, 0.2) }));
+    g.add(this.mesh(this.geo.box, this.mat.rock, { y: h + 0.15, sx: 1.8, sy: 0.3, sz: 1.8 }));
+    for (let i = 0; i < 5; i++) {
+      g.add(this.mesh(this.geo.lowSphere, this.mat.moss, {
+        x: rand(-0.8, 0.8), y: rand(0.2, h), z: rand(-0.8, 0.8),
+        sx: rand(0.4, 0.9), sy: rand(0.2, 0.5), sz: rand(0.4, 0.9),
+      }));
+    }
     return g;
   }
 
