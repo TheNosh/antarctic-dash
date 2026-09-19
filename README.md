@@ -42,13 +42,14 @@ run af via het menu, dan krijg je de vis van die run gewoon mee — je raakt hem
 alleen kwijt als je het tabblad sluit.
 
 In de shop (knop op het hoofdmenu, of direct vanaf het eindscherm) geef je die
-credits uit aan kleding in vier categorieën: **hoofddeksels, shirts, broeken en
-schoenen**. Wat je koopt trek je meteen aan; daarna wissel je vrij tussen alles
-wat je bezit. Je poppetje staat in de shop naast het menu te draaien, dus je
-ziet direct wat je aanhebt.
+credits uit aan uitrusting in zes categorieën: **hoofddeksels, brillen, shirts,
+rugtassen, broeken en schoenen**. Wat je koopt trek je meteen aan; daarna wissel
+je vrij tussen alles wat je bezit. Je poppetje staat in de shop naast het menu
+te draaien, dus je ziet direct wat je aanhebt.
 
-Van elke categorie heb je één stuk gratis. Credits, bezit en wat je aanhebt
-blijven bewaard in je browser.
+Van elke categorie heb je minstens één stuk gratis; bij brillen en rugtassen is
+"niets dragen" ook een gratis optie. Credits, bezit en wat je aanhebt blijven
+bewaard in je browser.
 
 ## Lokaal draaien
 
@@ -180,13 +181,20 @@ Zet een regel bij in de juiste lijst in `src/outfits.js`:
 | Categorie | Beschikbare `style` |
 |---|---|
 | `hat` | `hood`, `beanie`, `cap`, `ushanka`, `helmet`, `crown` |
+| `glasses` | `goggles`, `shades`, `round`, `visor`, `anaglyph`, `none` |
 | `shirt` | `plain`, `striped` |
+| `backpack` | `daypack`, `duffel`, `bedroll`, `expedition`, `jetpack`, `none` |
 | `pants` | `normal`, `puffy`, `shorts` |
 | `shoes` | `boots`, `snowshoes`, `skates` |
 
-Wil je een nieuwe vórm? Voeg een `case` toe aan `buildHat()` of `buildShoe()`
-in `src/world/props.js`. Die functies geven een rijtje meshes terug dat in de
-"mount" van het poppetje wordt gehangen; de rest gaat vanzelf.
+Wil je een nieuwe vórm? Voeg een `case` toe aan `buildHat()`, `buildGlasses()`,
+`buildBackpack()` of `buildShoe()` in `src/world/props.js`. Die functies geven
+een rijtje meshes terug dat in de "mount" van het poppetje wordt gehangen; de
+rest gaat vanzelf.
+
+Let op bij brillen: de schedel heeft straal ~0.21 en mutsranden lopen tot ~0.26.
+Zet glazen daarom op `z ≈ 0.25` of verder naar voren, anders verdwijnt je bril
+onder het hoofddeksel.
 
 Prijzen zijn in credits (= gevangen visjes). Zet `CREDITS_PER_FISH` in
 `src/config.js` hoger als sparen te traag voelt.
