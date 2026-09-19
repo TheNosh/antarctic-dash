@@ -251,7 +251,7 @@ export class Props {
       snowRough: surface.roughnessMap,
       frost,
       sky: skyTexture(col),
-      aurora: auroraTexture(col.aurora),
+      aurora: col.aurora ? auroraTexture(col.aurora) : null,
       flake: flakeTexture(),
     };
 
@@ -312,6 +312,17 @@ export class Props {
       skin: new THREE.MeshStandardMaterial({ color: 0xf3c9a6, roughness: 0.62, envMapIntensity: 0.7 }),
       fur: new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.92, envMapIntensity: 0.5 }),
 
+      // woestijn (ongebruikt in Antarctica, maar kost niets)
+      plant: new THREE.MeshStandardMaterial({ color: col.plant ?? 0x4e8c4a, roughness: 0.75, envMapIntensity: 0.5 }),
+      spine: new THREE.MeshStandardMaterial({ color: col.spine ?? 0xe8dcae, roughness: 0.5 }),
+      bone: new THREE.MeshStandardMaterial({ color: col.bone ?? 0xe6dcc2, roughness: 0.8, envMapIntensity: 0.4 }),
+      chitin: new THREE.MeshStandardMaterial({ color: col.chitin ?? 0x4a2f1c, roughness: 0.32, envMapIntensity: 1.0 }),
+      twig: new THREE.MeshStandardMaterial({ color: col.twig ?? 0x8a6a42, roughness: 0.9 }),
+      flask: new THREE.MeshStandardMaterial({
+        color: col.flask ?? 0x3fa9d8, roughness: 0.3,
+        emissive: col.flask ?? 0x3fa9d8, emissiveIntensity: 0.35,
+      }),
+
       // pickups
       fish: new THREE.MeshStandardMaterial({ color: 0x8fdcff, roughness: 0.35, emissive: 0x1b6f9c, emissiveIntensity: 0.5 }),
       fishFin: new THREE.MeshStandardMaterial({ color: 0x4fb8e8, roughness: 0.4 }),
@@ -320,6 +331,19 @@ export class Props {
         transparent: true, opacity: 0.55,
       }),
     };
+
+    /* Een level mag de gedeelde materialen bijstellen. Zo wordt "ijs"
+       in de woestijn gewoon ondoorzichtige rots, zonder dat er een
+       tweede set bouwers nodig is. */
+    for (const [naam, aanpassing] of Object.entries(theme.materials || {})) {
+      const mat = this.mat[naam];
+      if (!mat) { console.warn('Onbekend materiaal in level:', naam); continue; }
+      for (const [sleutel, waarde] of Object.entries(aanpassing)) {
+        if (sleutel === 'normalScale') mat.normalScale.set(waarde, waarde);
+        else mat[sleutel] = waarde;
+      }
+      mat.needsUpdate = true;
+    }
 
     // gedeelde geometrie
     this.geo = {
@@ -536,6 +560,251 @@ export class Props {
     return g;
   }
 
+  /* =====================================================
+     WOESTIJN — level 2
+     Kleuren komen uit het level; deze bouwers maken alleen
+     de vormen die Antarctica niet heeft.
+     ===================================================== */
+
+  /** Lage cactus — eroverheen springen of ontwijken. */
+  cactusSmall() {
+    const g = new THREE.Group();
+    const h = rand(0.8, 0.95);
+    g.add(this.mesh(this.geo.capsule, this.mat.plant, { y: h / 2, sx: 0.8, sy: h, sz: 0.8 }));
+    for (const s of [-1, 1]) {
+      if (Math.random() < 0.6) {
+        g.add(this.mesh(this.geo.capsule, this.mat.plant, {
+          x: s * 0.34, y: h * 0.62, sx: 0.44, sy: 0.42, sz: 0.44, rz: s * 0.5,
+        }));
+      }
+    }
+    // stekels
+    for (let i = 0; i < 7; i++) {
+      g.add(this.mesh(this.geo.cone, this.mat.spine, {
+        x: rand(-0.3, 0.3), y: rand(0.2, h), z: rand(-0.3, 0.3),
+        sx: 0.06, sy: 0.16, sz: 0.06, rx: rand(-1.2, 1.2), rz: rand(-1.2, 1.2),
+      }));
+    }
+    return g;
+  }
+
+  /** Reuzencactus — te hoog om overheen te springen. */
+  cactus() {
+    const g = new THREE.Group();
+    const h = rand(2.5, 3.0);
+    g.add(this.mesh(this.geo.capsule, this.mat.plant, { y: h / 2, sx: 0.95, sy: h * 0.86, sz: 0.95 }));
+    for (const s of [-1, 1]) {
+      const y = rand(h * 0.4, h * 0.6);
+      g.add(this.mesh(this.geo.capsule, this.mat.plant, { x: s * 0.42, y, sx: 0.5, sy: 0.5, sz: 0.5, rz: s * 0.9 }));
+      g.add(this.mesh(this.geo.capsule, this.mat.plant, { x: s * 0.62, y: y + 0.42, sx: 0.5, sy: 0.7, sz: 0.5 }));
+    }
+    for (let i = 0; i < 12; i++) {
+      g.add(this.mesh(this.geo.cone, this.mat.spine, {
+        x: rand(-0.4, 0.4), y: rand(0.3, h), z: rand(-0.4, 0.4),
+        sx: 0.06, sy: 0.18, sz: 0.06, rx: rand(-1.2, 1.2), rz: rand(-1.2, 1.2),
+      }));
+    }
+    return g;
+  }
+
+  /** Uitstekende rotsrichel boven één baan — eronderdoor glijden. */
+  rockShelf() {
+    const g = new THREE.Group();
+    g.add(this.mesh(this.geo.box, this.mat.iceSolid, { y: 1.8, sx: 2.2, sy: 1.4, sz: 1.3 }));
+    g.add(this.mesh(this.geo.box, this.mat.rock, { y: 2.55, sx: 2.3, sy: 0.2, sz: 1.4 }));
+    for (const s of [-1, 1]) {
+      g.add(this.mesh(this.geo.box, this.mat.iceSolid, { x: s * 0.98, y: 0.55, sx: 0.22, sy: 1.1, sz: 0.9 }));
+    }
+    for (let i = 0; i < 4; i++) {
+      g.add(this.mesh(this.geo.icosa, this.mat.rock, {
+        x: rand(-0.9, 0.9), y: rand(1.1, 2.5), z: rand(-0.6, 0.6),
+        sx: rand(0.3, 0.6), sy: rand(0.25, 0.5), sz: rand(0.3, 0.6), ry: Math.random() * 3,
+      }));
+    }
+    return g;
+  }
+
+  /** Verweerde steenboog over de volle breedte — glijden verplicht. */
+  stoneArch() {
+    const g = new THREE.Group();
+    g.add(this.mesh(this.geo.box, this.mat.iceSolid, { y: 2.0, sx: 11, sy: 1.8, sz: 1.6 }));
+    g.add(this.mesh(this.geo.box, this.mat.rock, { y: 2.95, sx: 11.3, sy: 0.26, sz: 1.8 }));
+    for (const s of [-1, 1]) {
+      g.add(this.mesh(this.geo.box, this.mat.iceSolid, { x: s * 5.3, y: 1.4, sx: 1.0, sy: 2.8, sz: 1.7 }));
+    }
+    // afgebrokkelde brokken aan de onderrand
+    for (let i = 0; i < 12; i++) {
+      g.add(this.mesh(this.geo.icosa, this.mat.iceSolid, {
+        x: rand(-5, 5), y: 1.16, z: rand(-0.5, 0.5),
+        sx: rand(0.25, 0.5), sy: rand(0.2, 0.4), sz: rand(0.25, 0.5), ry: Math.random() * 3,
+      }));
+    }
+    return g;
+  }
+
+  /**
+   * Fossiele ribbenkast — eronderdoor glijden.
+   * De ribben hángen van de ruggengraat naar beneden tot y ≈ 0.95:
+   * te laag om onderdoor te rennen, hoog genoeg om onderdoor te glijden.
+   * De pootbeenderen staan buiten de hitbox, dus die raak je nooit.
+   */
+  boneArch() {
+    const g = new THREE.Group();
+
+    // ruggengraat met wervels
+    g.add(this.mesh(this.geo.box, this.mat.bone, { y: 2.92, sx: 0.28, sy: 0.24, sz: 2.6 }));
+    for (let i = 0; i < 5; i++) {
+      g.add(this.mesh(this.geo.sphere, this.mat.bone, {
+        y: 2.92, z: -1.04 + i * 0.52, sx: 0.34, sy: 0.34, sz: 0.34,
+      }));
+    }
+
+    for (const s of [-1, 1]) {
+      // hangende ribben
+      for (let i = 0; i < 4; i++) {
+        const z = -0.86 + i * 0.57;
+        g.add(this.mesh(this.geo.capsule, this.mat.bone, {
+          x: s * 0.72, y: 1.95, z, sx: 0.2, sy: 1.7, sz: 0.2, rz: s * 0.18,
+        }));
+      }
+      // pootbeenderen als verankering, ruim buiten de baan
+      g.add(this.mesh(this.geo.capsule, this.mat.bone, { x: s * 1.42, y: 1.45, sx: 0.26, sy: 2.5, sz: 0.26 }));
+      g.add(this.mesh(this.geo.sphere, this.mat.bone, { x: s * 1.42, y: 0.16, sx: 0.4, sy: 0.3, sz: 0.5 }));
+    }
+    return g;
+  }
+
+  /** Schorpioen die dwars over de banen scharrelt. */
+  scorpion() {
+    const outer = new THREE.Group();
+    const g = new THREE.Group();
+    g.scale.setScalar(1.25);
+    outer.add(g);
+
+    g.add(this.mesh(this.geo.capsule, this.mat.chitin, { y: 0.3, sx: 0.9, sy: 0.7, sz: 1.2, rx: Math.PI / 2 }));
+    g.add(this.mesh(this.geo.sphere, this.mat.chitin, { y: 0.32, z: 0.5, sx: 0.5, sy: 0.4, sz: 0.5 }));
+    // scharen
+    for (const s of [-1, 1]) {
+      g.add(this.mesh(this.geo.capsule, this.mat.chitin, { x: s * 0.36, y: 0.28, z: 0.72, sx: 0.22, sy: 0.4, sz: 0.22, rx: 1.2, rz: s * 0.3 }));
+      g.add(this.mesh(this.geo.sphere, this.mat.chitin, { x: s * 0.46, y: 0.26, z: 1.02, sx: 0.34, sy: 0.24, sz: 0.44 }));
+      // pootjes
+      for (let i = 0; i < 3; i++) {
+        g.add(this.mesh(this.geo.capsule, this.mat.chitin, {
+          x: s * 0.42, y: 0.18, z: 0.2 - i * 0.32, sx: 0.1, sy: 0.34, sz: 0.1, rz: s * 1.1,
+        }));
+      }
+    }
+    // staart met angel
+    const staart = [[0.5, -0.55], [0.72, -0.85], [0.88, -1.05]];
+    for (const [y, z] of staart) {
+      g.add(this.mesh(this.geo.sphere, this.mat.chitin, { y, z, sx: 0.28, sy: 0.28, sz: 0.28 }));
+    }
+    g.add(this.mesh(this.geo.cone, this.mat.spine, { y: 0.92, z: -1.22, sx: 0.16, sy: 0.3, sz: 0.16, rx: -0.9 }));
+    // stofwolkje
+    for (let i = 0; i < 5; i++) {
+      g.add(this.mesh(this.geo.lowSphere, this.mat.snowSoft, {
+        x: rand(-0.5, 0.5), y: rand(0.02, 0.16), z: rand(-1.6, -0.9),
+        sx: rand(0.2, 0.4), sy: rand(0.1, 0.18), sz: rand(0.2, 0.4), shadow: false,
+      }));
+    }
+    return outer;
+  }
+
+  /** Rollend struikgewas dat op je af komt. */
+  tumbleweed() {
+    const outer = new THREE.Group();
+    const g = new THREE.Group();
+    g.position.y = 0.52;
+    outer.add(g);
+    outer.userData.roller = g;      // obstacles.js laat deze rollen
+
+    for (let i = 0; i < 14; i++) {
+      g.add(this.mesh(this.geo.box, this.mat.twig, {
+        x: rand(-0.12, 0.12), y: rand(-0.12, 0.12), z: rand(-0.12, 0.12),
+        sx: rand(0.05, 0.09), sy: rand(0.7, 1.0), sz: rand(0.05, 0.09),
+        rx: Math.random() * 3, ry: Math.random() * 3, rz: Math.random() * 3,
+      }));
+    }
+    return outer;
+  }
+
+  /** Veldfles — het verzamelobject van de woestijn. */
+  waterFlask() {
+    const g = new THREE.Group();
+    g.add(this.mesh(this.geo.cyl, this.mat.flask, { sx: 0.42, sy: 0.5, sz: 0.28 }));
+    g.add(this.mesh(this.geo.cyl, this.mat.twig, { y: 0.3, sx: 0.16, sy: 0.18, sz: 0.16 }));
+    g.add(this.mesh(this.geo.box, this.mat.twig, { z: 0.0, y: 0.06, sx: 0.46, sy: 0.1, sz: 0.3 }));
+    return g;
+  }
+
+  /* ---------- woestijndecor ---------- */
+
+  /** Grote verweerde rotspunt. */
+  mesa() {
+    const g = new THREE.Group();
+    const h = rand(4, 12), w = rand(4, 9);
+    g.add(this.mesh(this.geo.cyl, this.mat.iceSolid, {
+      y: h * 0.45, sx: w, sy: h, sz: w * rand(0.7, 1.3), ry: Math.random() * 3,
+    }));
+    g.add(this.mesh(this.geo.cyl, this.mat.rock, { y: h * 0.92, sx: w * 1.08, sy: h * 0.08, sz: w * 1.08 }));
+    return g;
+  }
+
+  /** Zandduin. */
+  dune() {
+    const g = new THREE.Group();
+    const n = 2 + ((Math.random() * 3) | 0);
+    for (let i = 0; i < n; i++) {
+      g.add(this.mesh(this.geo.lowSphere, this.mat.snow, {
+        x: rand(-2, 2), y: rand(-0.6, 0.1), z: rand(-3, 3),
+        sx: rand(2.5, 5), sy: rand(1, 2.6), sz: rand(3, 6), ry: Math.random() * 3,
+      }));
+    }
+    return g;
+  }
+
+  /** Dode boom. */
+  deadTree() {
+    const g = new THREE.Group();
+    const h = rand(2.4, 4);
+    g.add(this.mesh(this.geo.cyl, this.mat.twig, { y: h / 2, sx: 0.34, sy: h, sz: 0.34 }));
+    for (let i = 0; i < 4; i++) {
+      const s = i % 2 ? 1 : -1;
+      g.add(this.mesh(this.geo.capsule, this.mat.twig, {
+        x: s * rand(0.3, 0.7), y: rand(h * 0.55, h * 0.95), z: rand(-0.4, 0.4),
+        sx: 0.2, sy: rand(0.8, 1.4), sz: 0.2, rz: s * rand(0.6, 1.2),
+      }));
+    }
+    return g;
+  }
+
+  /** Groepje cactussen langs de route. */
+  cactusPatch() {
+    const g = new THREE.Group();
+    const n = 2 + ((Math.random() * 3) | 0);
+    for (let i = 0; i < n; i++) {
+      const c = Math.random() < 0.5 ? this.cactus() : this.cactusSmall();
+      c.position.set(rand(-3, 3), 0, rand(-3, 3));
+      c.scale.setScalar(rand(0.8, 1.4));
+      g.add(c);
+    }
+    return g;
+  }
+
+  /** Gebleekte schedel in het zand. */
+  skull() {
+    const g = new THREE.Group();
+    g.add(this.mesh(this.geo.sphere, this.mat.bone, { y: 0.34, sx: 0.8, sy: 0.7, sz: 0.9 }));
+    g.add(this.mesh(this.geo.box, this.mat.bone, { y: 0.22, z: 0.42, sx: 0.4, sy: 0.3, sz: 0.5 }));
+    for (const s of [-1, 1]) {
+      g.add(this.mesh(this.geo.cone, this.mat.bone, {
+        x: s * 0.42, y: 0.62, sx: 0.22, sy: 0.9, sz: 0.22, rz: s * 1.1, rx: -0.3,
+      }));
+    }
+    g.rotation.y = Math.random() * 3;
+    return g;
+  }
+
   /* ---------- pickups ---------- */
 
   fish() {
@@ -610,23 +879,38 @@ export class Props {
     return g;
   }
 
-  /** Willekeurig decorstuk, gewogen. */
-  scenery() {
-    const r = Math.random();
-    if (r < 0.34) return this.iceberg();
-    if (r < 0.62) return this.snowMound();
-    if (r < 0.78) return this.rockSpike();
-    if (r < 0.92) {
-      const g = new THREE.Group();
-      const n = 2 + ((Math.random() * 4) | 0);
-      for (let i = 0; i < n; i++) {
-        const p = this.penguinStanding();
-        p.position.set(rand(-3, 3), 0, rand(-3, 3));
-        g.add(p);
-      }
-      return g;
+  /** Groepje rondslenterende pinguïns. */
+  penguinColony() {
+    const g = new THREE.Group();
+    const n = 2 + ((Math.random() * 4) | 0);
+    for (let i = 0; i < n; i++) {
+      const p = this.penguinStanding();
+      p.position.set(rand(-3, 3), 0, rand(-3, 3));
+      g.add(p);
     }
-    return this.flagPole();
+    return g;
+  }
+
+  /**
+   * Willekeurig decorstuk, gewogen. Welke stukken dat zijn staat in het
+   * level (`scenery.props`), zodat elke locatie zijn eigen horizon heeft.
+   */
+  scenery() {
+    const lijst = this.theme.scenery?.props || [
+      { builder: 'iceberg', weight: 34 },
+      { builder: 'snowMound', weight: 28 },
+      { builder: 'rockSpike', weight: 16 },
+      { builder: 'penguinColony', weight: 14 },
+      { builder: 'flagPole', weight: 8 },
+    ];
+    let totaal = 0;
+    for (const e of lijst) totaal += e.weight;
+    let r = Math.random() * totaal;
+    for (const e of lijst) {
+      r -= e.weight;
+      if (r <= 0) return this[e.builder]();
+    }
+    return this[lijst[0].builder]();
   }
 }
 

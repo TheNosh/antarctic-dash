@@ -59,9 +59,10 @@ export class Track {
     sun.position.set(-165, 30, -420);
     this.sky.add(sun);
 
-    // zuiderlicht: drie langzaam schuivende gordijnen
+    // zuiderlicht: drie langzaam schuivende gordijnen.
+    // Levels zonder `colors.aurora` (zoals de woestijn) slaan dit over.
     this.auroras = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; this.level.colors.aurora && i < 3; i++) {
       const mat = new THREE.MeshBasicMaterial({
         map: t.aurora.clone(), transparent: true, opacity: 0.20 - i * 0.05,
         blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false,
@@ -226,6 +227,17 @@ export class Track {
   /* ---------------- sneeuwval ---------------- */
 
   _buildSnowfall(count) {
+    // Wat er uit de lucht komt verschilt per level: sneeuwvlokken vallen
+    // snel en recht, woestijnstof hangt en drijft.
+    const w = this.level.weather || {};
+    this.weather = {
+      color: w.color ?? 0xffffff,
+      size: w.size ?? 0.32,
+      opacity: w.opacity ?? 0.85,
+      minFall: w.minFall ?? 1.6,
+      maxFall: w.maxFall ?? 5.2,
+    };
+
     this.snowCount = count;
     const positions = new Float32Array(count * 3);
     this.snowSpeeds = new Float32Array(count);
@@ -234,7 +246,7 @@ export class Track {
       positions[i * 3 + 0] = rand(-42, 42);
       positions[i * 3 + 1] = rand(0, 34);
       positions[i * 3 + 2] = rand(-110, 22);
-      this.snowSpeeds[i] = rand(1.6, 5.2);
+      this.snowSpeeds[i] = rand(this.weather.minFall, this.weather.maxFall);
     }
 
     const geo = new THREE.BufferGeometry();
@@ -242,11 +254,11 @@ export class Track {
 
     this.snow = new THREE.Points(geo, new THREE.PointsMaterial({
       map: this.props.textures.flake,
-      color: 0xffffff,
-      size: 0.32,
+      color: this.weather.color,
+      size: this.weather.size,
       sizeAttenuation: true,
       transparent: true,
-      opacity: 0.85,
+      opacity: this.weather.opacity,
       depthWrite: false,
       fog: true,
     }));
@@ -257,7 +269,7 @@ export class Track {
   /** Minder vlokken op de lage grafische stand. */
   setQuality(high) {
     this.snow.geometry.setDrawRange(0, high ? this.snowCount : (this.snowCount * 0.28) | 0);
-    this.snow.material.size = high ? 0.32 : 0.42;
+    this.snow.material.size = this.weather.size * (high ? 1 : 1.3);
     for (const a of this.auroras) a.mesh.visible = high;
   }
 

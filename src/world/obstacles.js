@@ -168,7 +168,13 @@ export class ObstacleField {
         obj.rotation.z = Math.sin(rec.z * 0.4 + rec.phase) * 0.08;
       } else if (rec.vz !== undefined) {
         rec.z += rec.vz * dt;
-        obj.rotation.z = Math.sin(rec.z * 0.5 + rec.phase) * 0.1;
+        const roller = obj.userData.roller;
+        if (roller) {
+          // rolt over de grond: draaisnelheid volgt de afgelegde weg
+          roller.rotation.x -= (dz + rec.vz * dt) / 0.52;
+        } else {
+          obj.rotation.z = Math.sin(rec.z * 0.5 + rec.phase) * 0.1;
+        }
       }
 
       if (rec.kind === 'pickup') {
