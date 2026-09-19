@@ -4,13 +4,16 @@ Een 3D obstakel-run in de browser. Je rent zo ver mogelijk: springen over
 obstakels en kloven, glijden onder dingen door, duiken om dieren opzij te maaien
 en van baan wisselen om te ontwijken wat je niet aankunt.
 
-**Twee levels**, te kiezen op het startscherm:
+**Drie levels**, te kiezen op het startscherm:
 
 1. **Antarctica** — pakijs, gletsjerspleten, ijsbruggen en pinguïns die van
    opzij komen glijden of recht op je af stormen. Je verzamelt visjes.
 2. **Woestijn** — cactussen, rotswanden, een fossiele ribbenkast om onderdoor te
    glijden, schorpioenen die oversteken en rollend struikgewas dat op je af komt.
    Je verzamelt water.
+3. **Jungle** — lianengordijnen, omgevallen stammen, modderpoelen en
+   overwoekerde tempelruïnes, met apen en wilde zwijnen. Je ziet hier minder ver
+   vooruit dan in de andere levels. Je verzamelt fruit.
 
 Elk level houdt zijn eigen record bij. Credits die je verdient gelden overal.
 
@@ -139,6 +142,7 @@ src/
     index.js            levelregister
     antarctica.js       LEVEL 1 — alle leveldata
     woestijn.js         LEVEL 2 — idem
+    jungle.js           LEVEL 3 — idem
 ```
 
 De engine kent geen enkel obstakel bij naam. Alles wat een level eigen maakt
@@ -266,7 +270,7 @@ Snelheid en moeilijkheid staan per level in het levelbestand, niet hier.
 
 ## Nog te doen
 
-- [ ] Level 3 en verder (jungle, stad, vulkaan …)
+- [ ] Level 4 en verder (stad, vulkaan, onderwater …)
 - [ ] Een doorlopende soundtrack
 - [ ] Meer pinguïnsoorten met ander gedrag
 - [ ] Complete outfits als set, met een korting
