@@ -1,0 +1,17 @@
+# Let op: vendor/three.module.js hoort er juist WEL in.
+# Zonder build-stap is dat het enige wat het spel nodig heeft.
+
+# Besturingssysteem
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Node (alleen als je later toch een tool toevoegt)
+node_modules/
+npm-debug.log*

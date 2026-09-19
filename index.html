@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a1a2e">
+<meta name="description" content="Antarctic Dash - een 3D obstakel-run over het ijs van Antarctica.">
+<title>Antarctic Dash</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#127967;</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" hidden>
+    <div class="hud-top">
+      <div class="stat stat-main">
+        <span class="stat-label">Afstand</span>
+        <span class="stat-value"><span id="stat-distance">0</span><small>m</small></span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Score</span>
+        <span class="stat-value" id="stat-score">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Vis</span>
+        <span class="stat-value" id="stat-fish">0</span>
+      </div>
+    </div>
+
+    <div class="hud-left">
+      <div id="hearts" class="hearts"></div>
+      <div class="speedo">
+        <div class="speedo-fill" id="speedo-fill"></div>
+      </div>
+      <div class="speedo-label"><span id="stat-speed">0</span> km/u</div>
+      <div id="shield-badge" class="badge" hidden>Schild actief</div>
+    </div>
+
+    <button id="btn-pause" class="icon-btn" type="button" aria-label="Pauze">II</button>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <!-- Touch-bediening voor mobiel -->
+    <div id="touch-pad" hidden>
+      <button class="touch-btn" data-action="left"  type="button">◀</button>
+      <button class="touch-btn" data-action="jump"  type="button">SPRING</button>
+      <button class="touch-btn" data-action="slide" type="button">GLIJ</button>
+      <button class="touch-btn" data-action="dive"  type="button">DUIK</button>
+      <button class="touch-btn" data-action="right" type="button">▶</button>
+    </div>
+  </div>
+
+  <!-- ================= Startscherm ================= -->
+  <section id="screen-start" class="screen">
+    <div class="panel">
+      <p class="eyebrow">Level 1 — <span id="level-name">Antarctica</span></p>
+      <h1 class="title">Antarctic<span>Dash</span></h1>
+      <p class="tagline" id="level-tagline">Ren zo ver mogelijk over het pakijs. Pas op voor de pinguïns.</p>
+
+      <div class="controls keys-only">
+        <div class="ctrl"><kbd>A</kbd><kbd>D</kbd><span>of</span><kbd>◀</kbd><kbd>▶</kbd><b>Ontwijken</b></div>
+        <div class="ctrl"><kbd>W</kbd><kbd>Spatie</kbd><b>Springen</b></div>
+        <div class="ctrl"><kbd>S</kbd><kbd>▼</kbd><b>Glijden</b> <em>(onder ijs door)</em></div>
+        <div class="ctrl"><kbd>Shift</kbd><kbd>E</kbd><b>Duiken</b> <em>(pinguïns wegduwen)</em></div>
+        <div class="ctrl"><kbd>P</kbd><kbd>Esc</kbd><b>Pauze</b></div>
+      </div>
+
+      <div class="controls touch-only">
+        <div class="ctrl"><kbd>←→</kbd><b>Veeg opzij</b> <em>of gebruik de knoppen</em></div>
+        <div class="ctrl"><kbd>↑</kbd><b>Veeg omhoog of tik</b> <em>springen</em></div>
+        <div class="ctrl"><kbd>↓</kbd><b>Veeg omlaag</b> <em>glijden — in de lucht duiken</em></div>
+      </div>
+
+      <button id="btn-start" class="primary" type="button">Start de run</button>
+
+      <div class="meta">
+        <span>Record: <b id="best-start">0 m</b></span>
+        <button id="btn-quality" class="link" type="button">Grafisch: Hoog</button>
+        <button id="btn-sound" class="link" type="button">Geluid: Aan</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= Pauze ================= -->
+  <section id="screen-pause" class="screen" hidden>
+    <div class="panel narrow">
+      <h2>Pauze</h2>
+      <p class="tagline">Even op adem komen in de kou.</p>
+      <button id="btn-resume" class="primary" type="button">Verder</button>
+      <button id="btn-quit" class="secondary" type="button">Terug naar menu</button>
+    </div>
+  </section>
+
+  <!-- ================= Game over ================= -->
+  <section id="screen-over" class="screen" hidden>
+    <div class="panel narrow">
+      <p class="eyebrow" id="over-reason">Je bent tegen het ijs geknald</p>
+      <h2>Run voorbij</h2>
+      <div class="result">
+        <div><span class="stat-label">Afstand</span><b id="over-distance">0 m</b></div>
+        <div><span class="stat-label">Score</span><b id="over-score">0</b></div>
+        <div><span class="stat-label">Vis</span><b id="over-fish">0</b></div>
+      </div>
+      <p class="record" id="over-record" hidden>Nieuw record!</p>
+      <p class="tagline">Verste run ooit: <b id="best-over">0 m</b></p>
+      <button id="btn-again" class="primary" type="button">Opnieuw <em>(Enter)</em></button>
+      <button id="btn-menu" class="secondary" type="button">Menu</button>
+    </div>
+  </section>
+
+  <div id="loader" class="screen"><div class="panel narrow"><h2>Laden…</h2></div></div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+<noscript><p style="color:#fff;padding:2rem">Dit spel heeft JavaScript nodig.</p></noscript>
+</body>
+</html>
