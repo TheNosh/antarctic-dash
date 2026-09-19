@@ -200,6 +200,8 @@ export class Game {
   openShop() {
     this.cashIn();                       // ook als je vanaf het eindscherm komt
     this.state = 'shop';
+    // kom je vanaf het eindscherm, dan ligt het poppetje nog te tuimelen
+    this.player.reset();
     this.player.showcase = true;
     this.player.spin = 0;
     this.sound.setWind(0);
