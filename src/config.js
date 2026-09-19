@@ -56,4 +56,8 @@ export const STORAGE = {
   best: 'antarctic-dash:best',
   quality: 'antarctic-dash:quality',
   sound: 'antarctic-dash:sound',
+  wardrobe: 'antarctic-dash:wardrobe',
 };
+
+/** Hoeveel credits levert één gevangen vis op? */
+export const CREDITS_PER_FISH = 1;

@@ -11,7 +11,7 @@
    =========================================================== */
 
 import * as THREE from 'three';
-import { createRunner } from './world/props.js';
+import { createRunner, applyOutfit } from './world/props.js';
 import {
   LANE_X, GRAVITY, JUMP_V, DOUBLE_JUMP_V, DIVE_V,
   SLIDE_TIME, DIVE_TIME, DIVE_IFRAMES, DIVE_BOOST, HIT_IFRAMES, HITBOX,
@@ -24,7 +24,16 @@ export class Player {
     this.group = runner.group;
     scene.add(this.group);
 
+    // etalagestand: in de shop draait hij rustig heen en weer
+    this.showcase = false;
+    this.spin = 0;
+
     this.reset();
+  }
+
+  /** Trek een outfit aan (objecten uit outfits.js). */
+  setOutfit(outfit) {
+    applyOutfit(this.model, outfit);
   }
 
   reset() {
@@ -244,8 +253,19 @@ export class Player {
     const g = this.group;
 
     g.position.set(this.x, this.y, 0);
-    g.rotation.z = THREE.MathUtils.damp(g.rotation.z, drift * -0.13, 12, dt);
-    g.rotation.y = THREE.MathUtils.damp(g.rotation.y, drift * 0.16, 12, dt);
+
+    if (this.showcase) {
+      // rustig heen en weer, zodat je de outfit van alle kanten ziet
+      this.spin += dt * 0.5;
+      this.model.body.rotation.y = Math.PI + Math.sin(this.spin) * 1.3;
+      g.rotation.z = 0;
+      g.rotation.y = 0;
+    } else {
+      this.model.body.rotation.y = Math.PI;
+      g.rotation.z = THREE.MathUtils.damp(g.rotation.z, drift * -0.13, 12, dt);
+      // het model kijkt naar -z, dus de draai gaat andersom dan je zou denken
+      g.rotation.y = THREE.MathUtils.damp(g.rotation.y, drift * -0.16, 12, dt);
+    }
 
     // knipperen tijdens onkwetsbaarheid
     g.visible = this.invulnTimer <= 0 || (Math.floor(this.invulnTimer * 22) % 2 === 0);
