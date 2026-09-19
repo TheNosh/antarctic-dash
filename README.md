@@ -1,9 +1,18 @@
 # Antarctic Dash
 
-Een 3D obstakel-run in de browser. Je rent over het pakijs van Antarctica en moet
-zo ver mogelijk komen: springen over ijsblokken en gletsjerspleten, glijden onder
-ijsbruggen door, duiken om pinguïns opzij te maaien en van baan wisselen om
-alles te ontwijken wat je niet aankunt.
+Een 3D obstakel-run in de browser. Je rent zo ver mogelijk: springen over
+obstakels en kloven, glijden onder dingen door, duiken om dieren opzij te maaien
+en van baan wisselen om te ontwijken wat je niet aankunt.
+
+**Twee levels**, te kiezen op het startscherm:
+
+1. **Antarctica** — pakijs, gletsjerspleten, ijsbruggen en pinguïns die van
+   opzij komen glijden of recht op je af stormen. Je verzamelt visjes.
+2. **Woestijn** — cactussen, rotswanden, een fossiele ribbenkast om onderdoor te
+   glijden, schorpioenen die oversteken en rollend struikgewas dat op je af komt.
+   Je verzamelt water.
+
+Elk level houdt zijn eigen record bij. Credits die je verdient gelden overal.
 
 Gebouwd met [Three.js](https://threejs.org). **Geen build-stap, geen npm** — het
 zijn gewone HTML/CSS/JS-bestanden die je rechtstreeks op GitHub Pages kunt zetten.
@@ -129,6 +138,7 @@ src/
   levels/
     index.js            levelregister
     antarctica.js       LEVEL 1 — alle leveldata
+    woestijn.js         LEVEL 2 — idem
 ```
 
 De engine kent geen enkel obstakel bij naam. Alles wat een level eigen maakt
@@ -136,7 +146,11 @@ staat in één databestand.
 
 ## Een nieuw level toevoegen
 
-1. Kopieer `src/levels/antarctica.js` naar bijvoorbeeld `woestijn.js`.
+Kijk eerst naar `woestijn.js`: dat laat zien hoe ver je komt met alléén data.
+De woestijn hergebruikt de ijsbouwers voor blokken, wanden, kloven en de schans
+— dezelfde vormen, andere kleuren en materialen.
+
+1. Kopieer `src/levels/antarctica.js` naar bijvoorbeeld `jungle.js`.
 2. Pas aan:
    * `id`, `name`, `tagline`
    * `colors` — de hele sfeer hangt hieraan (lucht, grond, ijs, rots, speler).
@@ -145,12 +159,23 @@ staat in één databestand.
    * `fog` — `color` plus `density` (exponentiële mist; ~0.01 geeft 170 m zicht)
    * `light` — zonstand en -sterkte. Houd `hemiPower` laag: het zachte licht
      komt uit de omgevingsmap, niet uit het hemellicht.
+   * `materials` — stelt de gedeelde materialen bij. Zo wordt "ijs" in de
+     woestijn ondoorzichtige zandsteen zonder een tweede set bouwers.
+   * `weather` — wat er uit de lucht komt (kleur, grootte, valsnelheid).
+     Sneeuw valt snel en recht, woestijnstof hangt en drijft.
+   * `scenery.props` — welke decorstukken langs de horizon staan, gewogen
+   * `pickupLabel` — hoe het verzamelobject heet in de HUD ("Vis", "Water")
    * `speed` — `start`, `max` en `ramp` (over hoeveel meter je naar `max` klimt)
    * `progression` — op welke afstand een nieuwe moeilijkheidstrap opengaat
    * `obstacles` — welke obstakels bestaan en hoe groot hun hitbox is
    * `patterns` — in welke combinaties ze verschijnen
-3. Zet het level in de lijst in `src/levels/index.js`.
-4. Testen kan direct met `?level=woestijn` achter de URL.
+3. Zet het level in de lijst in `src/levels/index.js`. De knop op het
+   startscherm verschijnt vanzelf.
+4. Testen kan direct met `?level=jungle` achter de URL.
+
+Let op bij kleuren: `colors.ground` en `colors.snowTex` worden met elkaar
+vermenigvuldigd. Neem ze allebei licht, anders wordt de grond veel donkerder
+en verzadigder dan je bedoelde.
 
 Bestaat er nog geen model voor je nieuwe obstakel? Zet er een bouwer voor in
 `src/world/props.js` (een methode die een `THREE.Object3D` teruggeeft) en verwijs
@@ -241,7 +266,7 @@ Snelheid en moeilijkheid staan per level in het levelbestand, niet hier.
 
 ## Nog te doen
 
-- [ ] Level 2 en verder (woestijn, jungle, stad …)
+- [ ] Level 3 en verder (jungle, stad, vulkaan …)
 - [ ] Een doorlopende soundtrack
 - [ ] Meer pinguïnsoorten met ander gedrag
 - [ ] Complete outfits als set, met een korting

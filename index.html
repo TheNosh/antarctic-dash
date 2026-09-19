@@ -31,7 +31,7 @@
         <span class="stat-value" id="stat-score">0</span>
       </div>
       <div class="stat">
-        <span class="stat-label">Vis</span>
+        <span class="stat-label" id="pickup-label">Vis</span>
         <span class="stat-value" id="stat-fish">0</span>
       </div>
     </div>
@@ -62,9 +62,11 @@
   <!-- ================= Startscherm ================= -->
   <section id="screen-start" class="screen">
     <div class="panel">
-      <p class="eyebrow">Level 1 — <span id="level-name">Antarctica</span></p>
+      <p class="eyebrow"><span id="level-name">Antarctica</span></p>
       <h1 class="title">Antarctic<span>Dash</span></h1>
       <p class="tagline" id="level-tagline">Ren zo ver mogelijk over het pakijs. Pas op voor de pinguïns.</p>
+
+      <nav class="levels" id="level-picker" aria-label="Kies een level"></nav>
 
       <div class="controls keys-only">
         <div class="ctrl"><kbd>A</kbd><kbd>D</kbd><span>of</span><kbd>◀</kbd><kbd>▶</kbd><b>Ontwijken</b></div>
