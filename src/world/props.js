@@ -806,7 +806,10 @@ function buildShoe(P, m, style) {
       add(P.geo.box, m.shoeTrim, { y: -0.10, z: 0.12, sx: 0.44, sy: 0.05, sz: 0.86 });
       break;
     case 'skates':
-      add(P.geo.box, m.shoeTrim, { y: -0.19, z: 0.06, sx: 0.05, sy: 0.22, sz: 0.62 });
+      // de schoen komt omhoog en het ijzer eronder; anders steekt de
+      // hele lengte van het ijzer door de sneeuw en zakt de speler weg
+      parts[0].position.y = 0.12;
+      add(P.geo.box, m.shoeTrim, { y: 0.01, z: 0.06, sx: 0.05, sy: 0.22, sz: 0.62 });
       break;
     default: // 'boots'
       add(P.geo.box, m.shoeTrim, { y: -0.09, z: 0.08, sx: 0.30, sy: 0.07, sz: 0.46 });
