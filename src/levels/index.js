@@ -6,11 +6,12 @@
    =========================================================== */
 
 import { antarctica } from './antarctica.js';
+import { woestijn } from './woestijn.js';
 
 export const LEVELS = [
   antarctica,
+  woestijn,
   // volgende keer bijvoorbeeld:
-  // woestijn,   // level 2 — zandstormen, cactussen, scorpioenen
   // jungle,     // level 3 — lianen, moerasgaten, apen
 ];
 
