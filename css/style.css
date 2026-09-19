@@ -387,9 +387,14 @@ button.primary:active, button.secondary:active { transform: translateY(1px); }
 
 .shop-hint { margin: 10px 0 0; color: var(--ink-dim); font-size: .78rem; line-height: 1.45; }
 
-.tabs { display: flex; gap: 6px; margin: 14px 0 12px; }
+/* zes categorieën: twee rijen van drie */
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 14px 0 12px;
+}
 .tab {
-  flex: 1 1 0;
   padding: 9px 6px;
   border: 1px solid var(--edge);
   border-radius: 10px;
