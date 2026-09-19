@@ -10,41 +10,117 @@ import * as THREE from 'three';
 const rand = (a, b) => a + Math.random() * (b - a);
 const pick = (arr) => arr[(Math.random() * arr.length) | 0];
 
-/* ---------- Procedurele texturen ---------- */
+/* ---------- Procedurele texturen ----------
+   Het sneeuwvlak krijgt niet alleen een kleurtextuur maar ook een
+   normal map en een roughness map. Die twee doen het meeste werk:
+   zonder reliëf en zonder variatie in glans blijft sneeuw een vlakke
+   grijze vlakte, hoe goed je verlichting ook is.
+   ------------------------------------------ */
 
-/** Sneeuwvlak met korrel en een paar ijsaders. */
-function snowTexture(colors) {
-  const s = 512;
+/** Naadloos loopende waarde-ruis op een rooster van freq x freq. */
+function valueNoise(size, freq) {
+  const lattice = new Float32Array(freq * freq);
+  for (let i = 0; i < lattice.length; i++) lattice[i] = Math.random();
+
+  const out = new Float32Array(size * size);
+  const scale = freq / size;
+  const smooth = (t) => t * t * (3 - 2 * t);
+
+  for (let y = 0; y < size; y++) {
+    const fy = y * scale, y0 = Math.floor(fy), ty = smooth(fy - y0);
+    const y0i = (y0 % freq) * freq, y1i = ((y0 + 1) % freq) * freq;
+    for (let x = 0; x < size; x++) {
+      const fx = x * scale, x0 = Math.floor(fx), tx = smooth(fx - x0);
+      const x0i = x0 % freq, x1i = (x0 + 1) % freq;
+      const a = lattice[y0i + x0i], b = lattice[y0i + x1i];
+      const c = lattice[y1i + x0i], d = lattice[y1i + x1i];
+      out[y * size + x] = (a + (b - a) * tx) + ((c + (d - c) * tx) - (a + (b - a) * tx)) * ty;
+    }
+  }
+  return out;
+}
+
+/** Meerdere octaven ruis opgeteld — geeft natuurlijke, onregelmatige vormen. */
+function fbm(size, octaves, baseFreq) {
+  const out = new Float32Array(size * size);
+  let amp = 1, freq = baseFreq, norm = 0;
+  for (let o = 0; o < octaves; o++) {
+    const layer = valueNoise(size, freq);
+    for (let i = 0; i < out.length; i++) out[i] += layer[i] * amp;
+    norm += amp;
+    amp *= 0.5;
+    freq *= 2;
+  }
+  for (let i = 0; i < out.length; i++) out[i] /= norm;
+  return out;
+}
+
+/** Zet een hoogteveld om in een normal map (tangent space). */
+function normalMapFrom(height, size, strength) {
   const c = document.createElement('canvas');
-  c.width = c.height = s;
+  c.width = c.height = size;
   const g = c.getContext('2d');
-
-  g.fillStyle = colors.snowTex || '#eaf4ff';
-  g.fillRect(0, 0, s, s);
-
-  // korrel
-  const img = g.getImageData(0, 0, s, s);
+  const img = g.createImageData(size, size);
   const d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * 26;
-    d[i] += n; d[i + 1] += n; d[i + 2] += n * 0.6;
+  const at = (x, y) => height[((y + size) % size) * size + ((x + size) % size)];
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = (at(x + 1, y) - at(x - 1, y)) * strength;
+      const dy = (at(x, y + 1) - at(x, y - 1)) * strength;
+      const len = Math.hypot(dx, dy, 1);
+      const i = (y * size + x) * 4;
+      d[i]     = ((-dx / len) * 0.5 + 0.5) * 255;
+      d[i + 1] = ((-dy / len) * 0.5 + 0.5) * 255;
+      d[i + 2] = ((1 / len) * 0.5 + 0.5) * 255;
+      d[i + 3] = 255;
+    }
   }
   g.putImageData(img, 0, 0);
 
-  // zachte plekken
-  for (let i = 0; i < 40; i++) {
-    const x = Math.random() * s, y = Math.random() * s, r = rand(20, 90);
-    const grd = g.createRadialGradient(x, y, 0, x, y, r);
-    grd.addColorStop(0, 'rgba(190,220,255,.22)');
-    grd.addColorStop(1, 'rgba(190,220,255,0)');
-    g.fillStyle = grd;
-    g.fillRect(x - r, y - r, r * 2, r * 2);
-  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;   // linear, géén sRGB: dit zijn richtingen, geen kleuren
+}
 
-  // scheurtjes in het ijs
-  g.strokeStyle = 'rgba(120,170,215,.3)';
-  for (let i = 0; i < 18; i++) {
-    g.lineWidth = rand(0.5, 2);
+/**
+ * Sneeuwvlak: kleur, reliëf en glans.
+ * @returns {{map:THREE.Texture, normalMap:THREE.Texture, roughnessMap:THREE.Texture}}
+ */
+function snowSurface(colors) {
+  const s = 512;
+
+  // grof golvend sneeuwlandschap + fijne korrel erbovenop
+  const coarse = fbm(s, 4, 4);
+  const fine = fbm(s, 3, 32);
+  const height = new Float32Array(s * s);
+  for (let i = 0; i < height.length; i++) height[i] = coarse[i] * 0.75 + fine[i] * 0.25;
+
+  /* -- kleur -- */
+  const c = document.createElement('canvas');
+  c.width = c.height = s;
+  const g = c.getContext('2d');
+  const base = new THREE.Color(colors.snowTex || '#eef7ff');
+  const img = g.createImageData(s, s);
+  const d = img.data;
+
+  for (let i = 0; i < height.length; i++) {
+    // hoger = iets witter, lager = iets blauwer (sneeuw strooit blauw licht)
+    const h = height[i];
+    const tint = 0.9 + h * 0.16;
+    const grain = (Math.random() - 0.5) * 0.035;
+    const j = i * 4;
+    d[j]     = Math.min(255, base.r * 255 * (tint + grain));
+    d[j + 1] = Math.min(255, base.g * 255 * (tint + grain));
+    d[j + 2] = Math.min(255, base.b * 255 * (tint + grain * 0.4 + (1 - h) * 0.05));
+    d[j + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+
+  // een paar haarscheurtjes in het ijs eronder
+  g.strokeStyle = 'rgba(120,170,215,.22)';
+  for (let i = 0; i < 16; i++) {
+    g.lineWidth = rand(0.5, 1.8);
     g.beginPath();
     let x = Math.random() * s, y = Math.random() * s;
     g.moveTo(x, y);
@@ -52,26 +128,67 @@ function snowTexture(colors) {
     g.stroke();
   }
 
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  return tex;
+  const map = new THREE.CanvasTexture(c);
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  map.colorSpace = THREE.SRGBColorSpace;
+
+  /* -- glans: dalen zijn aangestampt en glimmen, toppen zijn poederig -- */
+  const rc = document.createElement('canvas');
+  rc.width = rc.height = s;
+  const rg = rc.getContext('2d');
+  const rimg = rg.createImageData(s, s);
+  const rd = rimg.data;
+  for (let i = 0; i < height.length; i++) {
+    const v = (0.62 + height[i] * 0.34) * 255;
+    const j = i * 4;
+    rd[j] = rd[j + 1] = rd[j + 2] = v;
+    rd[j + 3] = 255;
+  }
+  rg.putImageData(rimg, 0, 0);
+  const roughnessMap = new THREE.CanvasTexture(rc);
+  roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+
+  // De sterkte moet hoog: het hoogteveld loopt van 0 tot 1 over 512 pixels,
+  // dus het verschil tussen twee buurpixels is minuscuul. Bij een lage
+  // waarde kantelen de normalen maar een paar graden en blijft de sneeuw
+  // een vlakke witte plaat.
+  return { map, normalMap: normalMapFrom(height, s, 18), roughnessMap };
 }
 
-/** Verticale gradiënt voor de lucht (dome). */
+/** Fijn, onregelmatig reliëf voor ijsoppervlakken. */
+function frostNormal() {
+  const s = 256;
+  const h = fbm(s, 3, 16);
+  return normalMapFrom(h, s, 12);
+}
+
+/**
+ * Verticale gradiënt voor de lucht.
+ * Een echte hemel loopt niet lineair: hij is donker in het zenit, klaart
+ * traag op naar het midden en heeft vlak boven de horizon een smalle,
+ * heldere nevelband. Die band maakt het verschil tussen "blauw vlak" en
+ * "lucht met diepte".
+ */
 function skyTexture(colors) {
+  const h = 512;
   const c = document.createElement('canvas');
-  c.width = 4; c.height = 256;
+  c.width = 4; c.height = h;
   const g = c.getContext('2d');
-  const grd = g.createLinearGradient(0, 0, 0, 256);
+
+  const grd = g.createLinearGradient(0, 0, 0, h);
   grd.addColorStop(0.00, colors.skyTop);
-  grd.addColorStop(0.45, colors.skyMid);
+  grd.addColorStop(0.28, colors.skyTop);
+  grd.addColorStop(0.52, colors.skyMid);
+  grd.addColorStop(0.78, colors.skyHaze || colors.skyMid);
+  grd.addColorStop(0.93, colors.skyLow);
   grd.addColorStop(1.00, colors.skyLow);
   g.fillStyle = grd;
-  g.fillRect(0, 0, 4, 256);
+  g.fillRect(0, 0, 4, h);
+
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
   return tex;
 }
 
@@ -125,8 +242,14 @@ export class Props {
     this.theme = theme;
     const col = theme.colors;
 
+    const surface = snowSurface(col);
+    const frost = frostNormal();
+
     this.textures = {
-      snow: snowTexture(col),
+      snow: surface.map,
+      snowNormal: surface.normalMap,
+      snowRough: surface.roughnessMap,
+      frost,
       sky: skyTexture(col),
       aurora: auroraTexture(col.aurora),
       flake: flakeTexture(),
@@ -134,36 +257,60 @@ export class Props {
 
     this.mat = {
       ground: new THREE.MeshStandardMaterial({
-        map: this.textures.snow, color: col.ground, roughness: 0.88, metalness: 0.02,
+        map: surface.map,
+        normalMap: surface.normalMap,
+        roughnessMap: surface.roughnessMap,
+        color: col.ground,
+        roughness: 1.0,          // wordt gemoduleerd door de roughnessMap
+        metalness: 0.0,
+        envMapIntensity: 0.55,
       }),
       lane: new THREE.MeshBasicMaterial({
         color: col.laneLine, transparent: true, opacity: 0.16, depthWrite: false,
       }),
+      // IJs: glanzend, maar het moet als obstakel wél afsteken tegen de
+      // sneeuw. Te glad en te doorzichtig en je ziet het niet aankomen.
       ice: new THREE.MeshStandardMaterial({
-        color: col.ice, roughness: 0.18, metalness: 0.05,
-        transparent: true, opacity: 0.86, flatShading: true,
+        color: col.ice, roughness: 0.2, metalness: 0.0,
+        normalMap: frost, normalScale: new THREE.Vector2(0.4, 0.4),
+        envMapIntensity: 0.9,
+        transparent: true, opacity: 0.93, flatShading: true,
       }),
       iceSolid: new THREE.MeshStandardMaterial({
-        color: col.iceDeep, roughness: 0.3, metalness: 0.05, flatShading: true,
+        color: col.iceDeep, roughness: 0.22, metalness: 0.0,
+        normalMap: frost, normalScale: new THREE.Vector2(0.5, 0.5),
+        envMapIntensity: 1.2, flatShading: true,
       }),
-      snow: new THREE.MeshStandardMaterial({ color: col.snow, roughness: 0.95, flatShading: true }),
-      snowSoft: new THREE.MeshStandardMaterial({ color: col.snow, roughness: 0.95 }),
-      rock: new THREE.MeshStandardMaterial({ color: col.rock, roughness: 0.95, flatShading: true }),
+      snow: new THREE.MeshStandardMaterial({
+        color: col.snow, roughness: 0.82, metalness: 0.0,
+        normalMap: frost, normalScale: new THREE.Vector2(0.25, 0.25),
+        envMapIntensity: 0.7, flatShading: true,
+      }),
+      snowSoft: new THREE.MeshStandardMaterial({
+        color: col.snow, roughness: 0.8, metalness: 0.0,
+        normalMap: frost, normalScale: new THREE.Vector2(0.3, 0.3),
+        envMapIntensity: 0.7,
+      }),
+      rock: new THREE.MeshStandardMaterial({
+        color: col.rock, roughness: 0.92, metalness: 0.0,
+        normalMap: frost, normalScale: new THREE.Vector2(0.8, 0.8),
+        envMapIntensity: 0.5, flatShading: true,
+      }),
       void: new THREE.MeshBasicMaterial({ color: col.abyss }),
       hazard: new THREE.MeshStandardMaterial({ color: col.hazard, roughness: 0.6, emissive: col.hazard, emissiveIntensity: 0.18 }),
 
-      // pinguïn
-      pBody: new THREE.MeshStandardMaterial({ color: 0x1c2438, roughness: 0.62 }),
-      pBelly: new THREE.MeshStandardMaterial({ color: 0xf7fbff, roughness: 0.72 }),
-      pBeak: new THREE.MeshStandardMaterial({ color: 0xffa32e, roughness: 0.45 }),
-      pEye: new THREE.MeshStandardMaterial({ color: 0x07090f, roughness: 0.25 }),
+      // pinguïn — veren zijn vet en nat, dus vrij glanzend
+      pBody: new THREE.MeshStandardMaterial({ color: 0x1c2438, roughness: 0.42, envMapIntensity: 0.9 }),
+      pBelly: new THREE.MeshStandardMaterial({ color: 0xf7fbff, roughness: 0.55, envMapIntensity: 0.8 }),
+      pBeak: new THREE.MeshStandardMaterial({ color: 0xffa32e, roughness: 0.3, envMapIntensity: 1.1 }),
+      // ogen spiegelen sterk; dat kleine lichtpuntje doet enorm veel
+      pEye: new THREE.MeshStandardMaterial({ color: 0x07090f, roughness: 0.06, metalness: 0.1, envMapIntensity: 2.2 }),
 
       // speler
-      coat: new THREE.MeshStandardMaterial({ color: col.player, roughness: 0.7 }),
-      coatDark: new THREE.MeshStandardMaterial({ color: col.playerDark, roughness: 0.75 }),
-      skin: new THREE.MeshStandardMaterial({ color: 0xf3c9a6, roughness: 0.8 }),
-      goggle: new THREE.MeshStandardMaterial({ color: 0x0d1b2a, roughness: 0.15, metalness: 0.6 }),
-      fur: new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.95 }),
+      coat: new THREE.MeshStandardMaterial({ color: col.player, roughness: 0.68, envMapIntensity: 0.6 }),
+      coatDark: new THREE.MeshStandardMaterial({ color: col.playerDark, roughness: 0.72, envMapIntensity: 0.6 }),
+      skin: new THREE.MeshStandardMaterial({ color: 0xf3c9a6, roughness: 0.62, envMapIntensity: 0.7 }),
+      fur: new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.92, envMapIntensity: 0.5 }),
 
       // pickups
       fish: new THREE.MeshStandardMaterial({ color: 0x8fdcff, roughness: 0.35, emissive: 0x1b6f9c, emissiveIntensity: 0.5 }),
@@ -351,11 +498,16 @@ export class Props {
       // pootjes omhoog
       g.add(this.mesh(this.geo.box, this.mat.pBeak, { x: s * 0.16, y: 0.3, z: -0.62, sx: 0.16, sy: 0.1, sz: 0.34, rx: -0.5 }));
     }
-    // opspattende sneeuw achter hem: maakt de beweging afleesbaar
-    for (let i = 0; i < 6; i++) {
+    // opspattende sneeuw achter hem: maakt de beweging afleesbaar.
+    // Klein en plat gehouden — grote bollen lezen als sneeuwballen.
+    for (let i = 0; i < 11; i++) {
+      const t = i / 11;                       // verder naar achteren = wijder en lager
       g.add(this.mesh(this.geo.lowSphere, this.mat.snowSoft, {
-        x: rand(-0.5, 0.5), y: rand(0.05, 0.55), z: rand(-1.5, -0.7),
-        sx: rand(0.3, 0.7), sy: rand(0.25, 0.5), sz: rand(0.4, 0.9), shadow: false,
+        x: rand(-0.25 - t * 0.5, 0.25 + t * 0.5),
+        y: rand(0.02, 0.1 + t * 0.34),
+        z: -0.6 - t * 1.3 + rand(-0.15, 0.15),
+        sx: rand(0.16, 0.34), sy: rand(0.1, 0.2), sz: rand(0.2, 0.46),
+        shadow: false,
       }));
     }
     return outer;
@@ -672,17 +824,18 @@ export function createRunner(props) {
 
   // eigen materialen, zodat kleding verkleuren niets anders raakt
   const mats = {
-    shirt:    new THREE.MeshStandardMaterial({ color: 0xff7a3c, roughness: 0.7 }),
-    accent:   new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.75 }),
-    pants:    new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.78 }),
-    shoes:    new THREE.MeshStandardMaterial({ color: 0x5b4a3b, roughness: 0.85 }),
-    shoeTrim: new THREE.MeshStandardMaterial({ color: 0x33291f, roughness: 0.85 }),
-    hat:      new THREE.MeshStandardMaterial({ color: 0xff7a3c, roughness: 0.75 }),
-    hatTrim:  new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.95 }),
-    glass:    new THREE.MeshStandardMaterial({ color: 0x0d1b2a, roughness: 0.15, metalness: 0.6 }),
-    glassTrim: new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.5 }),
-    pack:     new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.8 }),
-    packTrim: new THREE.MeshStandardMaterial({ color: 0xff8a4c, roughness: 0.7 }),
+    shirt:    new THREE.MeshStandardMaterial({ color: 0xff7a3c, roughness: 0.66, envMapIntensity: 0.6 }),
+    accent:   new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.7, envMapIntensity: 0.6 }),
+    pants:    new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.74, envMapIntensity: 0.55 }),
+    shoes:    new THREE.MeshStandardMaterial({ color: 0x5b4a3b, roughness: 0.6, envMapIntensity: 0.8 }),
+    shoeTrim: new THREE.MeshStandardMaterial({ color: 0x33291f, roughness: 0.7, envMapIntensity: 0.7 }),
+    hat:      new THREE.MeshStandardMaterial({ color: 0xff7a3c, roughness: 0.72, envMapIntensity: 0.6 }),
+    hatTrim:  new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.9, envMapIntensity: 0.5 }),
+    // brillenglas: spiegelt de lucht, maar houdt zijn eigen kleur
+    glass:    new THREE.MeshStandardMaterial({ color: 0x0d1b2a, roughness: 0.05, metalness: 0.25, envMapIntensity: 2.4 }),
+    glassTrim: new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.4, envMapIntensity: 0.9 }),
+    pack:     new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.72, envMapIntensity: 0.6 }),
+    packTrim: new THREE.MeshStandardMaterial({ color: 0xff8a4c, roughness: 0.65, envMapIntensity: 0.6 }),
     skin:     P.mat.skin,
     fur:      P.mat.fur,
   };

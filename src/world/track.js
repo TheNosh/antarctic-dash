@@ -42,12 +42,20 @@ export class Track {
     );
     this.sky.add(dome);
 
-    // lage poolzon
-    const sun = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: t.flake, color: 0xffe2b0, transparent: true, opacity: 0.85,
+    // lage poolzon: een kleine felle kern met een brede, zwakke halo eromheen
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: t.flake, color: 0xffd9a0, transparent: true, opacity: 0.30,
       blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
     }));
-    sun.scale.set(64, 64, 1);
+    halo.scale.set(150, 150, 1);
+    halo.position.set(-165, 30, -420);
+    this.sky.add(halo);
+
+    const sun = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: t.flake, color: 0xfff6e2, transparent: true, opacity: 0.95,
+      blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+    }));
+    sun.scale.set(38, 38, 1);
     sun.position.set(-165, 30, -420);
     this.sky.add(sun);
 
@@ -74,6 +82,56 @@ export class Track {
     }
   }
 
+  /**
+   * Bouwt een omgevingsmap uit een mini-versie van de lucht.
+   *
+   * Zonder dit krijgt elk materiaal alleen platte hemelverlichting: alles
+   * is dan even mat en niets weerkaatst iets. Met een omgevingsmap vangt
+   * ijs de lucht op, krijgen ogen en brillenglazen een lichtpunt, en
+   * kleurt de onderkant van alles mee met de sneeuw eronder — precies wat
+   * je op een echt sneeuwveld ziet.
+   *
+   * Dit draait één keer bij het opstarten; daarna kost het niets.
+   */
+  buildEnvironment(renderer, scene) {
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    pmrem.compileEquirectangularShader();
+
+    const env = new THREE.Scene();
+
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(50, 24, 16),
+      new THREE.MeshBasicMaterial({ map: this.props.textures.sky, side: THREE.BackSide })
+    );
+    env.add(dome);
+
+    // het sneeuwveld weerkaatst enorm veel licht naar boven
+    const floor = new THREE.Mesh(
+      new THREE.CircleGeometry(48, 24),
+      new THREE.MeshBasicMaterial({ color: this.level.colors.ground })
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -1;
+    env.add(floor);
+
+    // de zon als felle vlek, zodat er iets te spiegelen valt
+    const sun = new THREE.Mesh(
+      new THREE.SphereGeometry(3.2, 12, 10),
+      new THREE.MeshBasicMaterial({ color: 0xfff4de })
+    );
+    sun.position.set(...this.level.light.sunPos).normalize().multiplyScalar(44);
+    env.add(sun);
+
+    const rt = pmrem.fromScene(env, 0.03);
+    scene.environment = rt.texture;
+    this.envTarget = rt;
+
+    dome.geometry.dispose();
+    floor.geometry.dispose();
+    sun.geometry.dispose();
+    pmrem.dispose();
+  }
+
   /* ---------------- grond ---------------- */
 
   _buildGround() {
@@ -83,10 +141,15 @@ export class Track {
     const geo = new THREE.PlaneGeometry(GROUND_WIDTH, GROUND_SEGMENT, 1, 1);
     geo.rotateX(-Math.PI / 2);
 
-    const mat = this.props.mat.ground.clone();
-    mat.map = this.props.textures.snow.clone();
-    mat.map.repeat.set(24, 10);
-    mat.map.needsUpdate = true;
+    // kleur, reliëf en glans moeten dezelfde herhaling krijgen, anders
+    // lopen ze uit de pas en klopt de belichting niet meer
+    const mat = this.props.mat.ground;
+    for (const t of [mat.map, mat.normalMap, mat.roughnessMap]) {
+      t.repeat.set(24, 10);
+      t.anisotropy = 8;
+      t.needsUpdate = true;
+    }
+    mat.normalScale.set(1.0, 1.0);
 
     for (let i = 0; i < GROUND_SEGMENTS; i++) {
       const plate = new THREE.Mesh(geo, mat);
