@@ -266,7 +266,9 @@ export class Hud {
         btn.addEventListener('click', () => onPick('equip', slot, item.id));
       } else {
         btn.className = 'buy price';
-        btn.textContent = `🐟 ${item.price}`;
+        const munt = document.createElement('i');
+        munt.className = 'coin';
+        btn.append(munt, String(item.price));
         btn.disabled = !wardrobe.canAfford(item);
         btn.addEventListener('click', () => onPick('buy', slot, item.id));
       }
