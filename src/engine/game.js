@@ -12,7 +12,16 @@ import { Player } from '../player.js';
 import { Hud } from './hud.js';
 import { Input, isTouchDevice } from './input.js';
 import { Sound } from './audio.js';
+import { Wardrobe } from '../outfits.js';
 import { SCORE, START_LIVES, HIT_SLOWDOWN, STORAGE } from '../config.js';
+
+/**
+ * Hoe ver de shop-camera naast het poppetje mikt. De camera staat vóór
+ * de speler (kijkt naar +z), waardoor wereld-+x op het scherm links
+ * uitkomt; een negatieve waarde duwt het poppetje dus naar links, waar
+ * het shoppaneel hem niet afdekt.
+ */
+const SHOWCASE_SHIFT = -1.9;
 
 export class Game {
   constructor(canvas, level) {
@@ -75,10 +84,15 @@ export class Game {
     this.particles = new Particles(this.scene, this.props);
     this.player = new Player(this.scene, this.props);
 
+    /* --- garderobe --- */
+    this.wardrobe = new Wardrobe();
+    this.player.setOutfit(this.wardrobe.outfit());
+
     /* --- schil --- */
     this.hud = new Hud();
     this.hud.setLevel(L);
     this.hud.setBest(this.best);
+    this.hud.setCredits(this.wardrobe.credits);
     this.hud.setQualityLabel(this.highQuality);
     this.hud.setSoundLabel(this.soundOn);
     this.hud.bind({
@@ -86,6 +100,7 @@ export class Game {
       resume: () => this.resume(),
       menu: () => this.toMenu(),
       pause: () => this.pause(),
+      shop: () => this.openShop(),
       quality: () => this.toggleQuality(),
       sound: () => this.toggleSound(),
     });
@@ -149,6 +164,7 @@ export class Game {
     this.runTime = 0;
     this.stepTimer = 0;
     this.lastReason = 'Je knalde tegen het ijs';
+    this.cashed = false;          // vis is nog niet omgezet in credits
 
     this.player.reset();
     this.field.reset();
@@ -160,13 +176,59 @@ export class Game {
     this.hud.setStats({ distance: 0, score: 0, fish: 0, speed: this.speed, maxSpeed: this.level.speed.max });
   }
 
+  /** Vis uit de afgelopen run omzetten in credits — hoogstens één keer. */
+  cashIn() {
+    if (this.cashed) return 0;
+    this.cashed = true;
+    const earned = this.wardrobe.awardFish(this.fish);
+    this.hud.setCredits(this.wardrobe.credits);
+    return earned;
+  }
+
   start() {
     this.sound.unlock();
     this.resetRun();
     this.state = 'playing';
+    this.player.showcase = false;
     this.hud.showScreen(null);
     this.input.showTouchPad(this.isTouch);
     this.hud.toast('Ga!');
+  }
+
+  /* ---------------- shop ---------------- */
+
+  openShop() {
+    this.cashIn();                       // ook als je vanaf het eindscherm komt
+    this.state = 'shop';
+    this.player.showcase = true;
+    this.player.spin = 0;
+    this.sound.setWind(0);
+    this.sound.resume();
+    this.input.showTouchPad(false);
+    this.hud.setShopHint(null);
+    this.hud.renderShop(this.wardrobe, (action, slot, id) => this.onShopPick(action, slot, id));
+    this.hud.showScreen('shop');
+  }
+
+  onShopPick(action, slot, id) {
+    if (action === 'buy') {
+      const result = this.wardrobe.buy(slot, id);
+      if (result === 'bought') {
+        this.sound.shield();
+        const { owned, total } = this.wardrobe.progress();
+        this.hud.setShopHint(`Gekocht en aangetrokken. Je hebt nu ${owned} van de ${total} stuks.`);
+      } else if (result === 'poor') {
+        this.sound.hit();
+        this.hud.setShopHint('Daar heb je nog niet genoeg credits voor. Vang meer visjes!');
+      }
+    } else {
+      this.wardrobe.equip(slot, id);
+      this.sound.coin();
+      this.hud.setShopHint(null);
+    }
+
+    this.player.setOutfit(this.wardrobe.outfit());
+    this.hud.renderShop(this.wardrobe, (a, s, i) => this.onShopPick(a, s, i));
   }
 
   pause() {
@@ -185,8 +247,11 @@ export class Game {
   }
 
   toMenu() {
+    this.cashIn();                 // vis niet laten verdampen bij afbreken
     this.state = 'menu';
+    this.player.showcase = false;
     this.sound.resume();
+    this.sound.setWind(0);
     this.resetRun();
     this.input.showTouchPad(false);
     this.hud.showScreen('start');
@@ -207,12 +272,15 @@ export class Game {
       localStorage.setItem(STORAGE.best, String(Math.floor(this.best)));
     }
 
+    const earned = this.cashIn();
+
     // even laten uittollen voordat het scherm komt
     setTimeout(() => {
       if (this.state !== 'over') return;
       this.hud.showGameOver({
         distance: this.distance, score: this.score, fish: this.fish,
         reason, best: this.best, isRecord,
+        earned, credits: this.wardrobe.credits,
       });
     }, 900);
   }
@@ -222,6 +290,11 @@ export class Game {
      ===================================================== */
 
   onAction(action) {
+    if (this.state === 'shop') {
+      if (action === 'pause' || action === 'confirm') this.toMenu();
+      return;
+    }
+
     if (action === 'pause') {
       if (this.state === 'playing') this.pause();
       else if (this.state === 'paused') this.resume();
@@ -266,6 +339,7 @@ export class Game {
     if (this.state === 'paused') { this.renderer.render(this.scene, this.camera); return; }
 
     if (this.state === 'menu') this.updateMenu(dt);
+    else if (this.state === 'shop') this.updateShowcase(dt);
     else this.updatePlay(dt);
 
     this.renderer.render(this.scene, this.camera);
@@ -278,6 +352,44 @@ export class Game {
     this.track.update(dz, dt, 9, this.camera.position);
     this.particles.update(dt, dz);
     this.updateCamera(dt, 9);
+  }
+
+  /** Shop: camera voor het poppetje, zodat je ziet wat je aantrekt. */
+  updateShowcase(dt) {
+    const dz = 3 * dt;
+    this.player.update(dt, 7);
+    this.track.update(dz, dt, 7, this.camera.position);
+    this.particles.update(dt, dz);
+
+    const cam = this.camera;
+    const p = this.player;
+
+    // breed scherm: paneel rechts, poppetje links. Smal: paneel onder.
+    const wide = window.innerWidth >= 900;
+    // Smal scherm: het paneel beslaat de onderste ~60%, dus de camera gaat
+    // verder naar achteren en mikt laag. Zo staat het poppetje tussen 6% en
+    // 35% van de schermhoogte — ruim boven de bovenrand van het paneel.
+    // (De verticale FOV ligt vast, dus die verhouding geldt op elk scherm.)
+    const pos = wide ? [p.x + 0.3, 2.15, -5.6] : [p.x, 2.6, -7.5];
+    const aim = wide ? [p.x + SHOWCASE_SHIFT, 1.05, 0] : [p.x, -1.6, 0];
+
+    cam.position.x = THREE.MathUtils.damp(cam.position.x, pos[0], 5, dt);
+    cam.position.y = THREE.MathUtils.damp(cam.position.y, pos[1], 5, dt);
+    cam.position.z = THREE.MathUtils.damp(cam.position.z, pos[2], 5, dt);
+
+    if (Math.abs(cam.fov - this.baseFov) > 0.05) {
+      cam.fov = THREE.MathUtils.damp(cam.fov, this.baseFov, 5, dt);
+      cam.updateProjectionMatrix();
+    }
+
+    this._look ||= new THREE.Vector3();
+    this._look.x = THREE.MathUtils.damp(this._look.x, aim[0], 5, dt);
+    this._look.y = THREE.MathUtils.damp(this._look.y, aim[1], 5, dt);
+    this._look.z = THREE.MathUtils.damp(this._look.z, aim[2], 5, dt);
+    cam.lookAt(this._look);
+
+    this.sun.target.position.set(p.x, 0, 0);
+    this.sun.target.updateMatrixWorld();
   }
 
   updatePlay(dt) {

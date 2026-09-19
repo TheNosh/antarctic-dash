@@ -2,7 +2,12 @@
    hud.js — alles wat buiten het 3D-beeld op het scherm staat.
    =========================================================== */
 
+import { SLOTS, ITEMS } from '../outfits.js';
+
 const $ = (id) => document.getElementById(id);
+
+/** 0xff7a3c → "#ff7a3c" */
+const hex = (n) => '#' + (n >>> 0).toString(16).padStart(6, '0');
 
 export class Hud {
   constructor() {
@@ -22,7 +27,15 @@ export class Hud {
         start: $('screen-start'),
         pause: $('screen-pause'),
         over: $('screen-over'),
+        shop: $('screen-shop'),
       },
+
+      creditsStart: $('credits-start'),
+      creditsShop: $('credits-shop'),
+      shopTabs: $('shop-tabs'),
+      shopItems: $('shop-items'),
+      shopHint: $('shop-hint'),
+      overEarned: $('over-earned'),
 
       levelName: $('level-name'),
       levelTagline: $('level-tagline'),
@@ -40,6 +53,8 @@ export class Hud {
     this._lives = -1;
     this._shown = { distance: -1, score: -1, fish: -1, speed: -1 };
     this._toastTimer = 0;
+    this._shopTab = SLOTS[0].id;
+    this._defaultHint = this.el.shopHint.textContent;
   }
 
   setLevel(level) {
@@ -105,12 +120,15 @@ export class Hud {
 
   /* ---------------- einde run ---------------- */
 
-  showGameOver({ distance, score, fish, reason, best, isRecord }) {
+  showGameOver({ distance, score, fish, reason, best, isRecord, earned, credits }) {
     this.el.overDistance.textContent = `${Math.floor(distance)} m`;
     this.el.overScore.textContent = Math.floor(score).toLocaleString('nl-NL');
     this.el.overFish.textContent = fish;
     this.el.overReason.textContent = reason;
     this.el.overRecord.hidden = !isRecord;
+    this.el.overEarned.innerHTML =
+      `+${earned} credit${earned === 1 ? '' : 's'} &middot; totaal <b>${Math.floor(credits).toLocaleString('nl-NL')}</b>`;
+    this.setCredits(credits);
     this.setBest(best);
     this.showScreen('over');
   }
@@ -129,6 +147,102 @@ export class Hud {
     this.el.sound.textContent = `Geluid: ${on ? 'Aan' : 'Uit'}`;
   }
 
+  /* ---------------- shop ---------------- */
+
+  setCredits(n) {
+    const txt = Math.floor(n).toLocaleString('nl-NL');
+    this.el.creditsStart.textContent = txt;
+    this.el.creditsShop.textContent = txt;
+  }
+
+  setShopHint(text) {
+    this.el.shopHint.textContent = text || this._defaultHint;
+  }
+
+  /**
+   * Tekent de hele shop opnieuw.
+   * @param {Wardrobe} wardrobe
+   * @param {(actie:'buy'|'equip', slot:string, id:string) => void} onPick
+   */
+  renderShop(wardrobe, onPick) {
+    this.setCredits(wardrobe.credits);
+
+    /* -- tabbladen -- */
+    const tabs = this.el.shopTabs;
+    tabs.replaceChildren();
+    for (const slot of SLOTS) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tab';
+      b.role = 'tab';
+      b.textContent = slot.label;
+      b.setAttribute('aria-selected', String(slot.id === this._shopTab));
+      b.addEventListener('click', () => {
+        this._shopTab = slot.id;
+        this.setShopHint(null);
+        this.renderShop(wardrobe, onPick);
+      });
+      tabs.appendChild(b);
+    }
+
+    /* -- artikelen -- */
+    const list = this.el.shopItems;
+    const scroll = list.scrollTop;
+    list.replaceChildren();
+
+    const slot = this._shopTab;
+    for (const item of ITEMS[slot]) {
+      const owned = wardrobe.has(item.id);
+      const on = wardrobe.isEquipped(slot, item.id);
+
+      const row = document.createElement('div');
+      row.className = `item${on ? ' equipped' : ''}${owned ? '' : ' locked'}`;
+
+      const swatch = document.createElement('div');
+      swatch.className = 'swatch';
+      const a = hex(item.colors.main);
+      const b = hex(item.colors.trim ?? item.colors.accent ?? item.colors.main);
+      swatch.style.background = `linear-gradient(135deg, ${a} 0 58%, ${b} 58% 100%)`;
+      row.appendChild(swatch);
+
+      const body = document.createElement('div');
+      body.className = 'item-body';
+      const name = document.createElement('div');
+      name.className = 'item-name';
+      name.textContent = item.name;
+      body.appendChild(name);
+      if (item.note) {
+        const note = document.createElement('div');
+        note.className = 'item-note';
+        note.textContent = item.note;
+        body.appendChild(note);
+      }
+      row.appendChild(body);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      if (on) {
+        btn.className = 'buy on';
+        btn.textContent = 'Aan';
+        btn.disabled = true;
+      } else if (owned) {
+        btn.className = 'buy wear';
+        btn.textContent = 'Aantrekken';
+        btn.addEventListener('click', () => onPick('equip', slot, item.id));
+      } else {
+        btn.className = 'buy price';
+        btn.textContent = `🐟 ${item.price}`;
+        btn.disabled = !wardrobe.canAfford(item);
+        btn.addEventListener('click', () => onPick('buy', slot, item.id));
+      }
+      row.appendChild(btn);
+
+      list.appendChild(row);
+    }
+
+    list.scrollTop = scroll;
+  }
+
   /* ---------------- knoppen aansluiten ---------------- */
 
   bind(handlers) {
@@ -138,6 +252,9 @@ export class Hud {
     $('btn-quit').addEventListener('click', handlers.menu);
     $('btn-menu').addEventListener('click', handlers.menu);
     $('btn-pause').addEventListener('click', handlers.pause);
+    $('btn-shop').addEventListener('click', handlers.shop);
+    $('btn-over-shop').addEventListener('click', handlers.shop);
+    $('btn-shop-close').addEventListener('click', handlers.menu);
     this.el.quality.addEventListener('click', handlers.quality);
     this.el.sound.addEventListener('click', handlers.sound);
   }
