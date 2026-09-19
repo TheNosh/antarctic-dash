@@ -11,7 +11,7 @@
    =========================================================== */
 
 import * as THREE from 'three';
-import { createRunner, applyOutfit } from './world/props.js';
+import { createRunner, applyOutfit, TORSO_Y } from './world/props.js';
 import {
   LANE_X, GRAVITY, JUMP_V, DOUBLE_JUMP_V, DIVE_V,
   SLIDE_TIME, DIVE_TIME, DIVE_IFRAMES, DIVE_BOOST, HIT_IFRAMES, HITBOX,
@@ -55,7 +55,7 @@ export class Player {
     this.group.position.set(this.x, 0, 0);
     this.group.rotation.set(0, 0, 0);
     this.group.visible = true;
-    this.model.torso.position.y = 1.02;
+    this.model.torso.position.y = TORSO_Y;
     this.model.torso.rotation.set(0, 0, 0);
   }
 
@@ -272,46 +272,88 @@ export class Player {
 
     const lerp = (o, prop, to, k = 14) => { o[prop] = THREE.MathUtils.damp(o[prop], to, k, dt); };
 
+    /* Tekenafspraak voor de gewrichten (het ledemaat hangt omlaag):
+       positieve rotatie.x zwaait het uiteinde naar achteren, negatieve
+       naar voren. Een knie kan alleen naar achteren buigen (positief),
+       een elleboog alleen naar voren (negatief). */
+    const setArm = (i, shoulder, elbow, k = 14) => {
+      lerp(arms[i].rotation, 'x', shoulder, k);
+      lerp(arms[i].userData.elbow.rotation, 'x', elbow, k);
+    };
+    const setLeg = (i, hip, knee, k = 14) => {
+      lerp(legs[i].rotation, 'x', hip, k);
+      lerp(legs[i].userData.knee.rotation, 'x', knee, k);
+    };
+
     switch (this.state) {
+      /* Glijden en duiken gaan allebei op de buik, net als de pinguïns.
+         Op je rúg zou de rugzak onder je lichaam door de grond zakken;
+         op je buik ligt hij bovenop en blijft alles boven het maaiveld.
+         De waarden hieronder zijn doorgerekend: het hoogste punt komt op
+         y ≈ 0.89 en het laagste op −0.12, gelijk aan gewoon rennen. */
       case 'slide': {
-        lerp(torso.position, 'y', 0.46, 16);
-        lerp(torso.rotation, 'x', -1.15, 16);
-        lerp(arms[0].rotation, 'x', -2.5); lerp(arms[1].rotation, 'x', -2.5);
-        lerp(legs[0].rotation, 'x', 0.45); lerp(legs[1].rotation, 'x', 0.75);
-        lerp(head.rotation, 'x', 0.7);
+        lerp(torso.position, 'y', 0.28, 16);
+        lerp(torso.rotation, 'x', 1.52, 16);
+        lerp(torso.rotation, 'y', 0, 12);
+        // armen langs het lichaam naar achteren
+        setArm(0, -0.15, -0.15, 16); setArm(1, -0.15, -0.15, 16);
+        setLeg(0, -0.10, 0.35, 16);  setLeg(1, 0.08, 0.20, 16);
+        lerp(head.rotation, 'x', -0.55);
         break;
       }
       case 'dive': {
-        lerp(torso.position, 'y', 0.44, 18);
-        lerp(torso.rotation, 'x', 1.32, 18);
-        lerp(arms[0].rotation, 'x', -2.9, 18); lerp(arms[1].rotation, 'x', -2.9, 18);
-        lerp(legs[0].rotation, 'x', 0.25); lerp(legs[1].rotation, 'x', 0.25);
-        lerp(head.rotation, 'x', -0.85);
+        lerp(torso.position, 'y', 0.30, 18);
+        lerp(torso.rotation, 'x', 1.45, 18);
+        lerp(torso.rotation, 'y', 0, 12);
+        // gestrekt naar voren, als een duiker
+        setArm(0, -2.90, -0.10, 18); setArm(1, -2.90, -0.10, 18);
+        setLeg(0, 0.05, 0.12, 18);   setLeg(1, 0.15, 0.12, 18);
+        lerp(head.rotation, 'x', -0.50);
         break;
       }
       case 'air': {
         const rising = this.vy > 0;
-        lerp(torso.position, 'y', 1.04, 10);
+        lerp(torso.position, 'y', TORSO_Y + 0.02, 10);
         lerp(torso.rotation, 'x', rising ? -0.12 : 0.22, 10);
-        lerp(arms[0].rotation, 'x', rising ? -2.2 : -0.6);
-        lerp(arms[1].rotation, 'x', rising ? -1.4 : -1.9);
-        lerp(legs[0].rotation, 'x', rising ? -1.0 : 0.35);
-        lerp(legs[1].rotation, 'x', rising ? 0.45 : -0.55);
+        lerp(torso.rotation, 'y', 0, 10);
+        if (rising) {
+          // knieën opgetrokken, armen omhoog
+          setArm(0, -2.1, -1.0); setArm(1, -1.5, -1.3);
+          setLeg(0, -0.95, 1.45); setLeg(1, 0.40, 0.75);
+        } else {
+          // benen naar voren om te landen
+          setArm(0, -0.6, -0.7); setArm(1, -1.9, -0.9);
+          setLeg(0, 0.35, 0.35); setLeg(1, -0.60, 0.95);
+        }
         lerp(head.rotation, 'x', 0);
         break;
       }
       default: {
         // rennen — pasfrequentie loopt mee met de snelheid
         this.runPhase += dt * (5.2 + speed * 0.34);
-        const s = Math.sin(this.runPhase);
-        const c = Math.cos(this.runPhase * 2);
-        lerp(torso.position, 'y', 1.02 + c * 0.035, 20);
-        lerp(torso.rotation, 'x', 0.14, 10);
-        legs[0].rotation.x = s * 0.95;
-        legs[1].rotation.x = -s * 0.95;
-        arms[0].rotation.x = -s * 0.85;
-        arms[1].rotation.x = s * 0.85;
+        const ph = this.runPhase;
+        const c = Math.cos(ph * 2);
+
+        lerp(torso.position, 'y', TORSO_Y + c * 0.035, 20);
+        lerp(torso.rotation, 'x', 0.16, 10);
+        // lichte rompdraai tegen de armzwaai in
+        torso.rotation.y = Math.sin(ph) * 0.09;
+
+        for (let i = 0; i < 2; i++) {
+          const p = ph + i * Math.PI;         // benen lopen in tegenfase
+          const sw = Math.sin(p);
+
+          // heup zwaait, knie buigt kort na het afzetten door
+          legs[i].rotation.x = sw * 0.95;
+          legs[i].userData.knee.rotation.x = Math.max(0, Math.sin(p + 2.0)) * 1.45;
+
+          // arm tegengesteld aan het been aan dezelfde kant
+          arms[i].rotation.x = -sw * 0.8;
+          arms[i].userData.elbow.rotation.x = -(0.75 + Math.max(0, -sw) * 0.4);
+        }
+
         lerp(head.rotation, 'x', -0.06);
+        head.rotation.y = -Math.sin(ph) * 0.05;
         break;
       }
     }
