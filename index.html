@@ -78,12 +78,37 @@
       </div>
 
       <button id="btn-start" class="primary" type="button">Start de run</button>
+      <button id="btn-shop" class="secondary" type="button">
+        Shop <span class="purse">🐟 <b id="credits-start">0</b></span>
+      </button>
 
       <div class="meta">
         <span>Record: <b id="best-start">0 m</b></span>
         <button id="btn-quality" class="link" type="button">Grafisch: Hoog</button>
         <button id="btn-sound" class="link" type="button">Geluid: Aan</button>
       </div>
+    </div>
+  </section>
+
+  <!-- ================= Shop ================= -->
+  <section id="screen-shop" class="screen shop-screen" hidden>
+    <div class="panel shop">
+      <header class="shop-head">
+        <div>
+          <p class="eyebrow">Uitrusting</p>
+          <h2>Shop</h2>
+        </div>
+        <div class="purse big">🐟 <b id="credits-shop">0</b></div>
+      </header>
+
+      <p class="shop-hint" id="shop-hint">
+        Elke vis die je onderweg vangt is één credit waard.
+      </p>
+
+      <nav class="tabs" id="shop-tabs" role="tablist"></nav>
+      <div class="items" id="shop-items"></div>
+
+      <button id="btn-shop-close" class="primary" type="button">Klaar</button>
     </div>
   </section>
 
@@ -108,8 +133,10 @@
         <div><span class="stat-label">Vis</span><b id="over-fish">0</b></div>
       </div>
       <p class="record" id="over-record" hidden>Nieuw record!</p>
+      <p class="earned" id="over-earned">+0 credits &middot; totaal <b>0</b></p>
       <p class="tagline">Verste run ooit: <b id="best-over">0 m</b></p>
       <button id="btn-again" class="primary" type="button">Opnieuw <em>(Enter)</em></button>
+      <button id="btn-over-shop" class="secondary" type="button">Naar de shop</button>
       <button id="btn-menu" class="secondary" type="button">Menu</button>
     </div>
   </section>
