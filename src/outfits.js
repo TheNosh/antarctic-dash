@@ -1,7 +1,7 @@
 /* ===========================================================
    outfits.js — de garderobe.
 
-   Vier categorieën, elk met een gratis startstuk (prijs 0) dat je
+   Zes categorieën, elk met een gratis startstuk (prijs 0) dat je
    automatisch bezit. De rest koop je met credits; credits verdien je
    door visjes te vangen tijdens een run.
 
@@ -43,6 +43,20 @@ export const ITEMS = {
     { id: 'crown-ice', name: 'IJskroon', price: 750,
       style: 'crown', note: 'Koning van het pakijs.',
       colors: { main: 0x9fe1ff, trim: 0xffd479 } },
+
+    /* -- woestijn & jungle -- */
+    { id: 'cap-khaki', name: 'Woestijnpet', price: 110,
+      style: 'cap', note: 'Stoffig, maar hij doet zijn werk.',
+      colors: { main: 0xc2ab7e, trim: 0x6f5f3e } },
+    { id: 'straw-hat', name: 'Strooien hoed', price: 180,
+      style: 'straw', note: 'Brede rand tegen de woestijnzon.',
+      colors: { main: 0xe3c67e, trim: 0x8a6a3a } },
+    { id: 'pith-helmet', name: 'Safarihelm', price: 260,
+      style: 'pith', note: 'Voor de echte ontdekkingsreiziger.',
+      colors: { main: 0xefe6cc, trim: 0x6b5a3a } },
+    { id: 'leaf-crown', name: 'Bladerkrans', price: 340,
+      style: 'leafCrown', note: 'Koning van de jungle.',
+      colors: { main: 0x6b5030, trim: 0x49a03f } },
   ],
 
   /* ---------- brillen ---------- */
@@ -68,6 +82,14 @@ export const ITEMS = {
     { id: 'anaglyph', name: '3D-bril', price: 420,
       style: 'anaglyph', note: 'Rood en cyaan. Vraag niet waarom.',
       colors: { main: 0xe0302f, trim: 0x2fc8e0 } },
+
+    /* -- woestijn & jungle -- */
+    { id: 'dust-goggles', name: 'Stofbril', price: 90,
+      style: 'goggles', note: 'Houdt het zand uit je ogen.',
+      colors: { main: 0xb8a068, trim: 0x6d5a34 } },
+    { id: 'mosquito-net', name: 'Muggennet', price: 230,
+      style: 'net', note: 'Sluier over je gezicht. Je went eraan.',
+      colors: { main: 0xdce8d4, trim: 0x4a5a44 } },
   ],
 
   /* ---------- rugtassen ---------- */
@@ -92,6 +114,17 @@ export const ITEMS = {
     { id: 'jetpack', name: 'Jetpack', price: 900,
       style: 'jetpack', note: 'Doet niets. Staat geweldig.',
       colors: { main: 0xdfe5ec, trim: 0xff6b3d } },
+
+    /* -- woestijn & jungle -- */
+    { id: 'duffel-camel', name: 'Kameelleren tas', price: 130,
+      style: 'duffel', note: 'Verweerd en zandbestendig.',
+      colors: { main: 0xb08048, trim: 0x6a4a24 } },
+    { id: 'basket', name: 'Rieten mand', price: 200,
+      style: 'basket', note: 'Gevlochten, met schouderbanden.',
+      colors: { main: 0xc9a96a, trim: 0x7d5f30 } },
+    { id: 'machete-pack', name: 'Kaptas', price: 380,
+      style: 'machete', note: 'Met een machete op de klep.',
+      colors: { main: 0x5f6b44, trim: 0x39421f } },
   ],
 
   /* ---------- shirts (parka's) ---------- */
@@ -113,6 +146,17 @@ export const ITEMS = {
     { id: 'parka-gold', name: 'Gouden parka', price: 800,
       style: 'striped', note: 'Subtiel is anders.',
       colors: { main: 0xe8b53a, accent: 0x6b4708 } },
+
+    /* -- woestijn & jungle -- */
+    { id: 'shirt-khaki', name: 'Woestijnkhaki', price: 90,
+      style: 'plain', note: 'Licht en stoffig.',
+      colors: { main: 0xcdb98a, accent: 0x7a6842 } },
+    { id: 'safari-vest', name: 'Safarivest', price: 250,
+      style: 'vest', note: 'Met borstzakken vol nutteloze spullen.',
+      colors: { main: 0xa8a271, accent: 0x5f5a38 } },
+    { id: 'shirt-jungle', name: 'Junglegroen', price: 150,
+      style: 'plain', note: 'Gaat op in het bladerdek.',
+      colors: { main: 0x4a7a3c, accent: 0x243d1e } },
   ],
 
   /* ---------- broeken ---------- */
@@ -131,6 +175,13 @@ export const ITEMS = {
       colors: { main: 0xd94f3d } },
     { id: 'pants-neon', name: 'Neonbroek', price: 460,
       style: 'puffy', colors: { main: 0x2fe0a0 } },
+
+    /* -- woestijn & jungle -- */
+    { id: 'pants-cargo', name: 'Cargobroek', price: 170,
+      style: 'cargo', note: 'Met zakken op je dijen.',
+      colors: { main: 0xa89a6e } },
+    { id: 'pants-olive', name: 'Olijfgroene broek', price: 120,
+      style: 'normal', colors: { main: 0x5a6b3c } },
   ],
 
   /* ---------- schoenen ---------- */
@@ -147,6 +198,17 @@ export const ITEMS = {
       colors: { main: 0x1f2937, trim: 0xd7e3ee } },
     { id: 'boots-gold', name: 'Gouden laarzen', price: 600,
       style: 'boots', colors: { main: 0xe8b53a, trim: 0x8a6716 } },
+
+    /* -- woestijn & jungle -- */
+    { id: 'boots-desert', name: 'Woestijnlaarzen', price: 80,
+      style: 'boots', note: 'Suède, hoog opgeschoren.',
+      colors: { main: 0xc0a074, trim: 0x7a6040 } },
+    { id: 'sandals', name: 'Sandalen', price: 140,
+      style: 'sandals', note: 'Blote voeten. Op het hete zand.',
+      colors: { main: 0x8a6a42, trim: 0x5a4226 } },
+    { id: 'rubber-boots', name: 'Rubberlaarzen', price: 190,
+      style: 'rubber', note: 'Tot over je kuiten, tegen de modder.',
+      colors: { main: 0x3f5a3a, trim: 0x22301f } },
   ],
 };
 
