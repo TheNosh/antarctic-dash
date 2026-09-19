@@ -59,9 +59,14 @@ rugtassen, broeken en schoenen**. Wat je koopt trek je meteen aan; daarna wissel
 je vrij tussen alles wat je bezit. Je poppetje staat in de shop naast het menu
 te draaien, dus je ziet direct wat je aanhebt.
 
+Er zijn 55 stuks uitrusting, met per thema iets te halen: parka's en bontmutsen
+voor het ijs, strooien hoeden, stofbrillen en sandalen voor de woestijn, en een
+safarihelm, muggennet, kaptas en rubberlaarzen voor de jungle.
+
 Van elke categorie heb je minstens één stuk gratis; bij brillen en rugtassen is
-"niets dragen" ook een gratis optie. Credits, bezit en wat je aanhebt blijven
-bewaard in je browser.
+"niets dragen" ook een gratis optie. Credits gelden in élk level — vandaar het
+neutrale muntje bij de prijzen en niet de vis of het fruit dat je onderweg
+oppakt. Credits, bezit en wat je aanhebt blijven bewaard in je browser.
 
 ## Lokaal draaien
 
@@ -213,12 +218,16 @@ Zet een regel bij in de juiste lijst in `src/outfits.js`:
 
 | Categorie | Beschikbare `style` |
 |---|---|
-| `hat` | `hood`, `beanie`, `cap`, `ushanka`, `helmet`, `crown` |
-| `glasses` | `goggles`, `shades`, `round`, `visor`, `anaglyph`, `none` |
-| `shirt` | `plain`, `striped` |
-| `backpack` | `daypack`, `duffel`, `bedroll`, `expedition`, `jetpack`, `none` |
-| `pants` | `normal`, `puffy`, `shorts` |
-| `shoes` | `boots`, `snowshoes`, `skates` |
+| `hat` | `hood`, `beanie`, `cap`, `ushanka`, `helmet`, `crown`, `straw`, `pith`, `leafCrown` |
+| `glasses` | `goggles`, `shades`, `round`, `visor`, `anaglyph`, `net`, `none` |
+| `shirt` | `plain`, `striped`, `vest` |
+| `backpack` | `daypack`, `duffel`, `bedroll`, `expedition`, `jetpack`, `basket`, `machete`, `none` |
+| `pants` | `normal`, `puffy`, `shorts`, `cargo` |
+| `shoes` | `boots`, `snowshoes`, `skates`, `sandals`, `rubber` |
+
+`striped`, `vest` en `cargo` werken anders dan de rest: die schakelen meshes
+aan die al in het poppetje zitten (banden, borstzakken, dijzakken) in plaats van
+een mount opnieuw te bouwen. Zie `applyOutfit()`.
 
 Wil je een nieuwe vórm? Voeg een `case` toe aan `buildHat()`, `buildGlasses()`,
 `buildBackpack()` of `buildShoe()` in `src/world/props.js`. Die functies geven
