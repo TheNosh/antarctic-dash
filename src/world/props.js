@@ -183,6 +183,7 @@ export class Props {
       cyl: new THREE.CylinderGeometry(0.5, 0.5, 1, 10),
       icosa: new THREE.IcosahedronGeometry(0.5, 0),
       capsule: new THREE.CapsuleGeometry(0.34, 0.5, 4, 10),
+      torus: new THREE.TorusGeometry(0.5, 0.12, 6, 14),
     };
   }
 
@@ -497,7 +498,8 @@ function buildHat(P, m, style) {
 
     case 'cap':
       add(P.geo.sphere, m.hat,     { y: 0.14, sx: 0.46, sy: 0.38, sz: 0.46 });
-      add(P.geo.box,    m.hatTrim, { y: 0.10, z: 0.40, sx: 0.46, sy: 0.07, sz: 0.40, rx: -0.12 });
+      // klep net boven ooghoogte, anders valt hij over je bril heen
+      add(P.geo.box,    m.hatTrim, { y: 0.17, z: 0.40, sx: 0.46, sy: 0.07, sz: 0.40, rx: -0.12 });
       break;
 
     case 'ushanka':
@@ -528,6 +530,107 @@ function buildHat(P, m, style) {
     default: // 'hood'
       add(P.geo.sphere, m.hat,     { z: -0.06, sx: 0.52, sy: 0.54, sz: 0.52 });
       add(P.geo.cyl,    m.hatTrim, { z: 0.10, sx: 0.50, sy: 0.16, sz: 0.50, rx: Math.PI / 2 });
+  }
+  return parts;
+}
+
+/**
+ * Bouwt de bril; posities zijn in hoofd-coördinaten, gezicht op +z.
+ *
+ * De schedel heeft straal ~0.21 en mutsranden lopen tot ~0.26. Glazen
+ * staan daarom op z ≈ 0.25 en het vizier op straal 0.285: zo steekt je
+ * bril altijd onder het hoofddeksel vandaan in plaats van erin te
+ * verdwijnen. Pootjes liggen op x ≈ 0.22, tegen het hoofd aan.
+ */
+function buildGlasses(P, m, style) {
+  const parts = [];
+  const add = (geo, mat, o) => parts.push(P.mesh(geo, mat, o));
+
+  switch (style) {
+    case 'none':
+      break;
+
+    case 'round':
+      for (const s of [-1, 1]) {
+        add(P.geo.cyl,   m.glass,     { x: s * 0.16, y: 0.05, z: 0.26, sx: 0.30, sy: 0.04, sz: 0.30, rx: Math.PI / 2 });
+        add(P.geo.torus, m.glassTrim, { x: s * 0.16, y: 0.05, z: 0.26, sx: 0.34, sy: 0.34, sz: 0.34 });
+        add(P.geo.box,   m.glassTrim, { x: s * 0.225, y: 0.06, z: 0.08, sx: 0.04, sy: 0.03, sz: 0.36 });
+      }
+      add(P.geo.box, m.glassTrim, { y: 0.05, z: 0.26, sx: 0.14, sy: 0.03, sz: 0.03 });
+      break;
+
+    case 'shades':
+      for (const s of [-1, 1]) {
+        add(P.geo.box, m.glass,     { x: s * 0.17, y: 0.06, z: 0.25, sx: 0.24, sy: 0.11, sz: 0.06, rz: s * 0.12 });
+        add(P.geo.box, m.glassTrim, { x: s * 0.225, y: 0.07, z: 0.08, sx: 0.04, sy: 0.03, sz: 0.36 });
+      }
+      add(P.geo.box, m.glassTrim, { y: 0.08, z: 0.25, sx: 0.12, sy: 0.03, sz: 0.04 });
+      break;
+
+    case 'visor':
+      // wikkelt om het hele hoofd, ruim buiten elke mutsrand
+      add(P.geo.cyl, m.glass,     { y: 0.05, sx: 0.57, sy: 0.18, sz: 0.57 });
+      add(P.geo.cyl, m.glassTrim, { y: 0.15, sx: 0.58, sy: 0.05, sz: 0.58 });
+      break;
+
+    case 'anaglyph':
+      // 3D-bril: links de hoofdkleur, rechts de steunkleur
+      add(P.geo.box, m.glass,     { x: -0.16, y: 0.06, z: 0.26, sx: 0.22, sy: 0.12, sz: 0.03 });
+      add(P.geo.box, m.glassTrim, { x: 0.16, y: 0.06, z: 0.26, sx: 0.22, sy: 0.12, sz: 0.03 });
+      for (const s of [-1, 1]) {
+        add(P.geo.box, m.fur, { x: s * 0.225, y: 0.06, z: 0.10, sx: 0.04, sy: 0.04, sz: 0.34 });
+      }
+      add(P.geo.box, m.fur, { y: 0.06, z: 0.26, sx: 0.46, sy: 0.04, sz: 0.04 });
+      break;
+
+    default: // 'goggles' — de vertrouwde stormbril
+      add(P.geo.box, m.glass,     { y: 0.05, z: 0.24, sx: 0.50, sy: 0.17, sz: 0.14 });
+      add(P.geo.box, m.glassTrim, { y: 0.05, z: 0.02, sx: 0.52, sy: 0.09, sz: 0.46 });
+  }
+  return parts;
+}
+
+/** Bouwt de rugtas; posities zijn in romp-coördinaten, rug op -z. */
+function buildBackpack(P, m, style) {
+  const parts = [];
+  const add = (geo, mat, o) => parts.push(P.mesh(geo, mat, o));
+
+  switch (style) {
+    case 'none':
+      break;
+
+    case 'expedition':
+      add(P.geo.box, m.pack,     { y: 0.14, z: -0.44, sx: 0.66, sy: 0.92, sz: 0.36 });
+      add(P.geo.cyl, m.packTrim, { y: 0.62, z: -0.44, sx: 0.36, sy: 0.68, sz: 0.36, rz: Math.PI / 2 });
+      for (const s of [-1, 1]) {
+        add(P.geo.box, m.packTrim, { x: s * 0.2, y: 0.1, z: -0.30, sx: 0.1, sy: 0.8, sz: 0.06 });
+      }
+      break;
+
+    case 'duffel':
+      add(P.geo.cyl,    m.pack,     { y: 0.08, z: -0.44, sx: 0.40, sy: 0.88, sz: 0.40, rz: Math.PI / 2 });
+      for (const s of [-1, 1]) {
+        add(P.geo.sphere, m.packTrim, { x: s * 0.44, y: 0.08, z: -0.44, sx: 0.2, sy: 0.2, sz: 0.2 });
+      }
+      add(P.geo.box, m.packTrim, { y: 0.08, z: -0.30, sx: 0.12, sy: 0.7, sz: 0.06 });
+      break;
+
+    case 'bedroll':
+      add(P.geo.box, m.pack,     { y: -0.02, z: -0.40, sx: 0.56, sy: 0.54, sz: 0.28 });
+      add(P.geo.cyl, m.packTrim, { y: 0.36, z: -0.42, sx: 0.28, sy: 0.78, sz: 0.28, rz: Math.PI / 2 });
+      break;
+
+    case 'jetpack':
+      for (const s of [-1, 1]) {
+        add(P.geo.cyl,  m.pack,     { x: s * 0.2, y: 0.12, z: -0.42, sx: 0.28, sy: 0.78, sz: 0.28 });
+        add(P.geo.cone, m.packTrim, { x: s * 0.2, y: -0.36, z: -0.42, sx: 0.26, sy: 0.22, sz: 0.26, rx: Math.PI });
+      }
+      add(P.geo.box, m.packTrim, { y: 0.30, z: -0.42, sx: 0.56, sy: 0.12, sz: 0.30 });
+      break;
+
+    default: // 'daypack'
+      add(P.geo.box, m.pack,     { y: 0.05, z: -0.40, sx: 0.60, sy: 0.66, sz: 0.30 });
+      add(P.geo.box, m.packTrim, { y: 0.16, z: -0.57, sx: 0.40, sy: 0.16, sz: 0.06 });
   }
   return parts;
 }
@@ -576,8 +679,12 @@ export function createRunner(props) {
     shoeTrim: new THREE.MeshStandardMaterial({ color: 0x33291f, roughness: 0.85 }),
     hat:      new THREE.MeshStandardMaterial({ color: 0xff7a3c, roughness: 0.75 }),
     hatTrim:  new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.95 }),
+    glass:    new THREE.MeshStandardMaterial({ color: 0x0d1b2a, roughness: 0.15, metalness: 0.6 }),
+    glassTrim: new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.5 }),
+    pack:     new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.8 }),
+    packTrim: new THREE.MeshStandardMaterial({ color: 0xff8a4c, roughness: 0.7 }),
     skin:     P.mat.skin,
-    goggle:   P.mat.goggle,
+    fur:      P.mat.fur,
   };
 
   const torso = new THREE.Group();
@@ -586,8 +693,9 @@ export function createRunner(props) {
 
   torso.add(P.mesh(P.geo.capsule, mats.shirt, { sx: 0.95, sy: 0.9, sz: 0.8 }));
   torso.add(P.mesh(P.geo.box, mats.accent, { y: -0.1, sx: 0.78, sy: 0.22, sz: 0.62 }));   // riem
-  torso.add(P.mesh(P.geo.box, mats.accent, { y: 0.05, z: -0.4, sx: 0.6, sy: 0.66, sz: 0.3 })); // rugzak
-  torso.add(P.mesh(P.geo.box, P.mat.hazard, { y: 0.16, z: -0.57, sx: 0.4, sy: 0.16, sz: 0.06 }));
+
+  const packMount = new THREE.Group();
+  torso.add(packMount);
 
   // reflecterende banden — alleen zichtbaar bij een gestreept shirt
   const stripes = [
@@ -600,7 +708,11 @@ export function createRunner(props) {
   head.position.y = 0.58;
   torso.add(head);
   head.add(P.mesh(P.geo.sphere, mats.skin, { sx: 0.42, sy: 0.46, sz: 0.42 }));
-  head.add(P.mesh(P.geo.box, mats.goggle, { y: 0.05, z: 0.2, sx: 0.5, sy: 0.17, sz: 0.14 })); // stormbril
+
+  // brillen zitten ónder het hoofddeksel in de boom, zodat een muts
+  // er overheen valt en niet andersom
+  const glassMount = new THREE.Group();
+  head.add(glassMount);
 
   const hatMount = new THREE.Group();
   head.add(hatMount);
@@ -630,7 +742,10 @@ export function createRunner(props) {
     legs.push(leg);
   }
 
-  const runner = { group, body, torso, head, arms, legs, mats, hatMount, stripes, props: P };
+  const runner = {
+    group, body, torso, head, arms, legs, mats, stripes, props: P,
+    hatMount, glassMount, packMount,
+  };
 
   applyOutfit(runner, null);
   group.traverse((o) => { if (o.isMesh) o.castShadow = true; });
@@ -647,10 +762,12 @@ export function applyOutfit(runner, outfit) {
   const m = runner.mats;
 
   const o = outfit || {};
-  const hat   = o.hat   || { style: 'hood',   colors: { main: 0xff7a3c, trim: 0xf2efe6 } };
-  const shirt = o.shirt || { style: 'plain',  colors: { main: 0xff7a3c, accent: 0x2b3c55 } };
-  const pants = o.pants || { style: 'normal', colors: { main: 0x2b3c55 } };
-  const shoes = o.shoes || { style: 'boots',  colors: { main: 0x5b4a3b, trim: 0x33291f } };
+  const hat     = o.hat      || { style: 'hood',    colors: { main: 0xff7a3c, trim: 0xf2efe6 } };
+  const shirt   = o.shirt    || { style: 'plain',   colors: { main: 0xff7a3c, accent: 0x2b3c55 } };
+  const pants   = o.pants    || { style: 'normal',  colors: { main: 0x2b3c55 } };
+  const shoes   = o.shoes    || { style: 'boots',   colors: { main: 0x5b4a3b, trim: 0x33291f } };
+  const glasses = o.glasses  || { style: 'goggles', colors: { main: 0x0d1b2a, trim: 0x2b3c55 } };
+  const pack    = o.backpack || { style: 'daypack', colors: { main: 0x2b3c55, trim: 0xff8a4c } };
 
   /* -- shirt -- */
   m.shirt.color.setHex(shirt.colors.main);
@@ -687,6 +804,16 @@ export function applyOutfit(runner, outfit) {
   m.hat.color.setHex(hat.colors.main);
   m.hatTrim.color.setHex(hat.colors.trim ?? hat.colors.main);
   refill(runner.hatMount, buildHat(P, m, hat.style));
+
+  /* -- bril -- */
+  m.glass.color.setHex(glasses.colors.main);
+  m.glassTrim.color.setHex(glasses.colors.trim ?? glasses.colors.main);
+  refill(runner.glassMount, buildGlasses(P, m, glasses.style));
+
+  /* -- rugtas -- */
+  m.pack.color.setHex(pack.colors.main);
+  m.packTrim.color.setHex(pack.colors.trim ?? pack.colors.main);
+  refill(runner.packMount, buildBackpack(P, m, pack.style));
 
   // nieuwe onderdelen moeten ook schaduw werpen
   runner.group.traverse((x) => { if (x.isMesh) x.castShadow = true; });
