@@ -12,11 +12,14 @@
 
 import { STORAGE, CREDITS_PER_FISH } from './config.js';
 
+/** Volgorde van boven naar beneden; bepaalt ook de tabbladen in de shop. */
 export const SLOTS = [
-  { id: 'hat',   label: 'Hoofddeksels' },
-  { id: 'shirt', label: 'Shirts' },
-  { id: 'pants', label: 'Broeken' },
-  { id: 'shoes', label: 'Schoenen' },
+  { id: 'hat',      label: 'Hoofddeksels' },
+  { id: 'glasses',  label: 'Brillen' },
+  { id: 'shirt',    label: 'Shirts' },
+  { id: 'backpack', label: 'Rugtassen' },
+  { id: 'pants',    label: 'Broeken' },
+  { id: 'shoes',    label: 'Schoenen' },
 ];
 
 export const ITEMS = {
@@ -40,6 +43,55 @@ export const ITEMS = {
     { id: 'crown-ice', name: 'IJskroon', price: 750,
       style: 'crown', note: 'Koning van het pakijs.',
       colors: { main: 0x9fe1ff, trim: 0xffd479 } },
+  ],
+
+  /* ---------- brillen ---------- */
+  glasses: [
+    { id: 'goggles-dark', name: 'Stormbril', price: 0,
+      style: 'goggles', note: 'Waar je mee begon.',
+      colors: { main: 0x0d1b2a, trim: 0x2b3c55 } },
+    { id: 'goggles-none', name: 'Geen bril', price: 0,
+      style: 'none', note: 'Blote ogen in de poolwind.',
+      colors: { main: 0xf3c9a6, trim: 0xd8a985 } },
+    { id: 'goggles-amber', name: 'Amberbril', price: 70,
+      style: 'goggles', note: 'Meer contrast in de sneeuw.',
+      colors: { main: 0xffb347, trim: 0x7a4a12 } },
+    { id: 'shades', name: 'Zonnebril', price: 110,
+      style: 'shades', note: 'Tegen de laagstaande zon.',
+      colors: { main: 0x14181f, trim: 0x8a8f99 } },
+    { id: 'round-glasses', name: 'Ronde bril', price: 150,
+      style: 'round', note: 'Voor de onderzoeker in je.',
+      colors: { main: 0x243447, trim: 0xd9b25a } },
+    { id: 'visor-mirror', name: 'Spiegelvizier', price: 320,
+      style: 'visor', note: 'Wikkelt om je hele hoofd.',
+      colors: { main: 0x63d8ff, trim: 0xe6f7ff } },
+    { id: 'anaglyph', name: '3D-bril', price: 420,
+      style: 'anaglyph', note: 'Rood en cyaan. Vraag niet waarom.',
+      colors: { main: 0xe0302f, trim: 0x2fc8e0 } },
+  ],
+
+  /* ---------- rugtassen ---------- */
+  backpack: [
+    { id: 'daypack-navy', name: 'Dagrugzak', price: 0,
+      style: 'daypack', note: 'Waar je mee begon.',
+      colors: { main: 0x2b3c55, trim: 0xff8a4c } },
+    { id: 'pack-none', name: 'Geen tas', price: 0,
+      style: 'none', note: 'Reist een stuk lichter.',
+      colors: { main: 0x8fa8c4, trim: 0x5d7490 } },
+    { id: 'daypack-green', name: 'Mosgroene rugzak', price: 60,
+      style: 'daypack', colors: { main: 0x3f6b46, trim: 0xe0c877 } },
+    { id: 'duffel', name: 'Duffeltas', price: 140,
+      style: 'duffel', note: 'Dwars over je rug.',
+      colors: { main: 0x7b5533, trim: 0xd8c29a } },
+    { id: 'bedroll', name: 'Tas met slaapmat', price: 210,
+      style: 'bedroll', note: 'Opgerolde mat erbovenop.',
+      colors: { main: 0x4a5568, trim: 0xe4685d } },
+    { id: 'expedition', name: 'Expeditietas', price: 330,
+      style: 'expedition', note: 'Groot, met rolsluiting.',
+      colors: { main: 0xc43f2e, trim: 0x2b3c55 } },
+    { id: 'jetpack', name: 'Jetpack', price: 900,
+      style: 'jetpack', note: 'Doet niets. Staat geweldig.',
+      colors: { main: 0xdfe5ec, trim: 0xff6b3d } },
   ],
 
   /* ---------- shirts (parka's) ---------- */
