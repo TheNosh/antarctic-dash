@@ -13,6 +13,7 @@ import { Hud } from './hud.js';
 import { Input, isTouchDevice } from './input.js';
 import { Sound } from './audio.js';
 import { Wardrobe } from '../outfits.js';
+import { LEVELS } from '../levels/index.js';
 import { SCORE, START_LIVES, HIT_SLOWDOWN, STORAGE } from '../config.js';
 
 /**
@@ -32,7 +33,27 @@ export class Game {
 
     this.highQuality = localStorage.getItem(STORAGE.quality) !== 'low';
     this.soundOn = localStorage.getItem(STORAGE.sound) !== 'off';
-    this.best = Number(localStorage.getItem(STORAGE.best) || 0);
+    this.best = this.loadBest(level.id);
+  }
+
+  /* ---------------- records, per level bijgehouden ---------------- */
+
+  bestKey(id) { return `${STORAGE.best}:${id}`; }
+
+  loadBest(id) {
+    const v = Number(localStorage.getItem(this.bestKey(id)) || 0);
+    if (v > 0) return v;
+    // van vóór level 2 stond het record zonder levelnaam opgeslagen;
+    // dat hoorde altijd bij Antarctica
+    if (id === 'antarctica') return Number(localStorage.getItem(STORAGE.best) || 0);
+    return 0;
+  }
+
+  /** Naar een ander level: de wereld wordt bij het laden opgebouwd,
+   *  dus een herstart met de juiste parameter is het schoonst. */
+  gotoLevel(id) {
+    this.cashIn();
+    location.search = `?level=${encodeURIComponent(id)}`;
   }
 
   /* =====================================================
@@ -85,6 +106,9 @@ export class Game {
     this.sun = sun;
 
     /* --- wereld --- */
+    // kleur van opstuivend materiaal onder de voeten: sneeuw of zand
+    this.dust = L.colors.dust ?? 0xffffff;
+
     this.props = new Props(L);
     this.track = new Track(this.scene, this.props, L);
     this.track.buildEnvironment(this.renderer, this.scene);
@@ -101,6 +125,7 @@ export class Game {
     this.hud.setLevel(L);
     this.hud.setBest(this.best);
     this.hud.setCredits(this.wardrobe.credits);
+    this.hud.renderLevels(LEVELS, L.id, (id) => this.gotoLevel(id), (id) => this.loadBest(id));
     this.hud.setQualityLabel(this.highQuality);
     this.hud.setSoundLabel(this.soundOn);
     this.hud.bind({
@@ -288,7 +313,8 @@ export class Game {
     const isRecord = this.distance > this.best;
     if (isRecord) {
       this.best = this.distance;
-      localStorage.setItem(STORAGE.best, String(Math.floor(this.best)));
+      localStorage.setItem(this.bestKey(this.level.id), String(Math.floor(this.best)));
+      this.hud.renderLevels(LEVELS, this.level.id, (id) => this.gotoLevel(id), (id) => this.loadBest(id));
     }
 
     const earned = this.cashIn();
@@ -330,7 +356,7 @@ export class Game {
     switch (result) {
       case 'jump':
         this.sound.jump();
-        this.particles.emit({ x: p.x, y: 0.1, z: 0, count: 8, speed: 2.4, up: 1.6, life: 0.5, color: 0xffffff });
+        this.particles.emit({ x: p.x, y: 0.1, z: 0, count: 8, speed: 2.4, up: 1.6, life: 0.5, color: this.dust });
         break;
       case 'doublejump':
         this.sound.doubleJump();
@@ -338,7 +364,7 @@ export class Game {
         break;
       case 'slide':
         this.sound.slide();
-        this.particles.emit({ x: p.x, y: 0.15, z: 0.3, count: 14, speed: 2.6, up: 1.2, life: 0.55, color: 0xffffff });
+        this.particles.emit({ x: p.x, y: 0.15, z: 0.3, count: 14, speed: 2.6, up: 1.2, life: 0.55, color: this.dust });
         break;
       case 'dive':
         this.sound.dive();
@@ -446,7 +472,7 @@ export class Game {
     const pe = p.update(dt, effective);
     if (pe.includes('land')) {
       this.sound.land();
-      this.particles.emit({ x: p.x, y: 0.1, z: 0.2, count: 12, speed: 2.8, up: 1.2, life: 0.5, color: 0xffffff });
+      this.particles.emit({ x: p.x, y: 0.1, z: 0.2, count: 12, speed: 2.8, up: 1.2, life: 0.5, color: this.dust });
     }
     this.input.setAirborne(!p.grounded);
 
@@ -459,7 +485,7 @@ export class Game {
         x: p.x, y: 0.08, z: trail ? 0.45 : 0.25,
         count: trail ? 7 : 3, speed: trail ? 2.2 : 1.1,
         up: trail ? 1.0 : 0.5, life: trail ? 0.5 : 0.35,
-        color: 0xffffff, gravity: 11, drift: 2,
+        color: this.dust, gravity: 11, drift: 2,
       });
     }
 
@@ -491,7 +517,8 @@ export class Game {
     for (const ev of events) {
       switch (ev.type) {
         case 'pickup':
-          if (ev.kind === 'fish') {
+          // alles wat geen schild is telt als verzamelstuk (vis, water, …)
+          if (ev.kind !== 'shield') {
             this.fish++;
             this.score += SCORE.fish;
             this.sound.coin();
@@ -510,7 +537,7 @@ export class Game {
           this.score += SCORE.penguinKnock;
           this.sound.knock();
           this.hud.toast('Opzij!');
-          this.particles.emit({ x: ev.pos.x, y: ev.pos.y, z: ev.pos.z, count: 18, speed: 4, up: 2.2, life: 0.6, color: 0xffffff });
+          this.particles.emit({ x: ev.pos.x, y: ev.pos.y, z: ev.pos.z, count: 18, speed: 4, up: 2.2, life: 0.6, color: this.dust });
           break;
 
         case 'nearmiss':
@@ -520,7 +547,7 @@ export class Game {
         case 'ramp':
           p.launch(ev.launch);
           this.sound.jump();
-          this.particles.emit({ x: p.x, y: 1.2, z: 0, count: 20, speed: 3.4, up: 2.4, life: 0.6, color: 0xffffff });
+          this.particles.emit({ x: p.x, y: 1.2, z: 0, count: 20, speed: 3.4, up: 2.4, life: 0.6, color: this.dust });
           break;
 
         case 'fall':
@@ -544,7 +571,7 @@ export class Game {
             this.loseLife(`Je knalde tegen ${article(label)}`);
             this.sound.hit();
             p.hurt();
-            this.particles.emit({ x: p.x, y: 0.9, z: 0, count: 22, speed: 4, up: 2, life: 0.6, color: 0xffffff });
+            this.particles.emit({ x: p.x, y: 0.9, z: 0, count: 22, speed: 4, up: 2, life: 0.6, color: this.dust });
           }
           break;
         }

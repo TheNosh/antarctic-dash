@@ -39,6 +39,8 @@ export class Hud {
 
       levelName: $('level-name'),
       levelTagline: $('level-tagline'),
+      levelPicker: $('level-picker'),
+      pickupLabel: $('pickup-label'),
       bestStart: $('best-start'),
       bestOver: $('best-over'),
       overDistance: $('over-distance'),
@@ -60,6 +62,39 @@ export class Hud {
   setLevel(level) {
     this.el.levelName.textContent = level.name;
     this.el.levelTagline.textContent = level.tagline;
+    const spul = (level.pickupLabel || 'Vis').toLowerCase();
+    this.el.pickupLabel.textContent = level.pickupLabel || 'Vis';
+    this._defaultHint = `Elk stuk ${spul} dat je onderweg oppakt is één credit waard.`;
+    this.el.shopHint.textContent = this._defaultHint;
+  }
+
+  /**
+   * Tekent de levelknoppen op het startscherm.
+   * @param {Array} levels   alle levels
+   * @param {string} huidig  id van het level dat nu draait
+   * @param {(id:string)=>void} onKies
+   * @param {(id:string)=>number} recordVan
+   */
+  renderLevels(levels, huidig, onKies, recordVan) {
+    const nav = this.el.levelPicker;
+    nav.replaceChildren();
+
+    levels.forEach((level, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'level-btn';
+      if (level.id === huidig) b.setAttribute('aria-current', 'true');
+
+      const naam = document.createElement('span');
+      naam.textContent = `${i + 1}. ${level.name}`;
+      const record = document.createElement('small');
+      const beste = Math.floor(recordVan(level.id));
+      record.textContent = beste > 0 ? `record ${beste} m` : 'nog niet gelopen';
+      b.append(naam, record);
+
+      if (level.id !== huidig) b.addEventListener('click', () => onKies(level.id));
+      nav.appendChild(b);
+    });
   }
 
   /* ---------------- schermen ---------------- */
