@@ -1192,6 +1192,32 @@ function buildHat(P, m, style) {
       add(P.geo.box,    m.hat,     { y: -0.24, z: 0.02, sx: 0.50, sy: 0.09, sz: 0.44 });
       break;
 
+    case 'straw':
+      // brede rand; blijft boven ooghoogte zodat je bril zichtbaar blijft
+      add(P.geo.cyl,    m.hat,     { y: 0.22, sx: 1.08, sy: 0.05, sz: 1.08 });
+      add(P.geo.sphere, m.hat,     { y: 0.30, sx: 0.48, sy: 0.38, sz: 0.48 });
+      add(P.geo.cyl,    m.hatTrim, { y: 0.26, sx: 0.50, sy: 0.09, sz: 0.50 });
+      break;
+
+    case 'pith':
+      add(P.geo.sphere, m.hat,     { y: 0.18, sx: 0.52, sy: 0.46, sz: 0.52 });
+      add(P.geo.cyl,    m.hat,     { y: 0.20, sx: 0.82, sy: 0.05, sz: 0.88 });
+      add(P.geo.cyl,    m.hatTrim, { y: 0.26, sx: 0.54, sy: 0.08, sz: 0.54 });
+      add(P.geo.sphere, m.hatTrim, { y: 0.48, sx: 0.14, sy: 0.14, sz: 0.14 });
+      break;
+
+    case 'leafCrown':
+      add(P.geo.cyl, m.hat, { y: 0.24, sx: 0.48, sy: 0.10, sz: 0.48 });
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        add(P.geo.cone, m.hatTrim, {
+          x: Math.cos(a) * 0.24, y: 0.36, z: Math.sin(a) * 0.24,
+          sx: 0.26, sy: 0.34, sz: 0.1,
+          rx: Math.sin(a) * 0.7, rz: -Math.cos(a) * 0.7, ry: -a,
+        });
+      }
+      break;
+
     case 'crown':
       add(P.geo.cyl,    m.hat,     { y: 0.30, sx: 0.46, sy: 0.20, sz: 0.46 });
       for (let i = 0; i < 6; i++) {
@@ -1249,6 +1275,12 @@ function buildGlasses(P, m, style) {
       add(P.geo.cyl, m.glassTrim, { y: 0.15, sx: 0.58, sy: 0.05, sz: 0.58 });
       break;
 
+    case 'net':
+      // muggennet: doorzichtige sluier vanaf een hoepel over je gezicht
+      add(P.geo.cyl,   m.net,       { y: -0.08, sx: 0.64, sy: 0.64, sz: 0.64 });
+      add(P.geo.torus, m.glassTrim, { y: 0.23, sx: 0.66, sy: 0.66, sz: 0.5, rx: Math.PI / 2 });
+      break;
+
     case 'anaglyph':
       // 3D-bril: links de hoofdkleur, rechts de steunkleur
       add(P.geo.box, m.glass,     { x: -0.16, y: 0.06, z: 0.26, sx: 0.22, sy: 0.12, sz: 0.03 });
@@ -1304,6 +1336,28 @@ function buildBackpack(P, m, style) {
       add(P.geo.box, m.packTrim, { y: 0.30, z: -0.42, sx: 0.56, sy: 0.12, sz: 0.30 });
       break;
 
+    case 'basket':
+      // gevlochten mand: gestapelde ringen
+      for (let i = 0; i < 5; i++) {
+        add(P.geo.torus, m.pack, {
+          y: -0.18 + i * 0.17, z: -0.44,
+          sx: 0.62 + i * 0.03, sy: 0.62 + i * 0.03, sz: 0.5, rx: Math.PI / 2,
+        });
+      }
+      add(P.geo.cyl, m.packTrim, { y: -0.26, z: -0.44, sx: 0.58, sy: 0.06, sz: 0.58 });
+      for (const s of [-1, 1]) {
+        add(P.geo.box, m.packTrim, { x: s * 0.18, y: 0.08, z: -0.28, sx: 0.09, sy: 0.7, sz: 0.06 });
+      }
+      break;
+
+    case 'machete':
+      add(P.geo.box, m.pack,     { y: 0.03, z: -0.40, sx: 0.58, sy: 0.62, sz: 0.28 });
+      add(P.geo.box, m.packTrim, { y: 0.14, z: -0.56, sx: 0.40, sy: 0.14, sz: 0.06 });
+      // kapmes schuin over de klep
+      add(P.geo.box, m.blade,    { x: 0.16, y: 0.16, z: -0.58, sx: 0.1, sy: 0.7, sz: 0.04, rz: 0.55 });
+      add(P.geo.box, m.packTrim, { x: -0.05, y: -0.08, z: -0.58, sx: 0.09, sy: 0.24, sz: 0.06, rz: 0.55 });
+      break;
+
     default: // 'daypack'
       add(P.geo.box, m.pack,     { y: 0.05, z: -0.40, sx: 0.60, sy: 0.66, sz: 0.30 });
       add(P.geo.box, m.packTrim, { y: 0.16, z: -0.57, sx: 0.40, sy: 0.16, sz: 0.06 });
@@ -1316,6 +1370,15 @@ function buildShoe(P, m, style) {
   const parts = [];
   const add = (geo, mat, o) => parts.push(P.mesh(geo, mat, o));
 
+  // Sandalen hebben geen schoen: blote voet met een zool eronder.
+  if (style === 'sandals') {
+    add(P.geo.box, m.skin,     { z: 0.06, sx: 0.26, sy: 0.13, sz: 0.40 });
+    add(P.geo.box, m.shoes,    { y: -0.08, z: 0.08, sx: 0.30, sy: 0.06, sz: 0.46 });
+    add(P.geo.box, m.shoeTrim, { y: 0.01, z: 0.14, sx: 0.31, sy: 0.05, sz: 0.09 });
+    add(P.geo.box, m.shoeTrim, { y: 0.02, z: -0.04, sx: 0.29, sy: 0.05, sz: 0.09, rx: 0.3 });
+    return parts;
+  }
+
   add(P.geo.box, m.shoes, { z: 0.08, sx: 0.28, sy: 0.16, sz: 0.44 });
 
   switch (style) {
@@ -1327,6 +1390,13 @@ function buildShoe(P, m, style) {
       // hele lengte van het ijzer door de sneeuw en zakt de speler weg
       parts[0].position.y = 0.12;
       add(P.geo.box, m.shoeTrim, { y: 0.01, z: 0.06, sx: 0.05, sy: 0.22, sz: 0.62 });
+      break;
+
+    case 'rubber':
+      // hoge schacht tot over de kuit
+      add(P.geo.cyl, m.shoes,    { y: 0.30, z: -0.02, sx: 0.30, sy: 0.50, sz: 0.30 });
+      add(P.geo.cyl, m.shoeTrim, { y: 0.54, z: -0.02, sx: 0.33, sy: 0.08, sz: 0.33 });
+      add(P.geo.box, m.shoeTrim, { y: -0.09, z: 0.08, sx: 0.30, sy: 0.07, sz: 0.46 });
       break;
     default: // 'boots'
       add(P.geo.box, m.shoeTrim, { y: -0.09, z: 0.08, sx: 0.30, sy: 0.07, sz: 0.46 });
@@ -1371,6 +1441,12 @@ export function createRunner(props) {
     glassTrim: new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.4, envMapIntensity: 0.9 }),
     pack:     new THREE.MeshStandardMaterial({ color: 0x2b3c55, roughness: 0.72, envMapIntensity: 0.6 }),
     packTrim: new THREE.MeshStandardMaterial({ color: 0xff8a4c, roughness: 0.65, envMapIntensity: 0.6 }),
+    // muggennet: je moet er doorheen kunnen kijken
+    net:      new THREE.MeshStandardMaterial({
+      color: 0xd8e2d0, roughness: 0.9, transparent: true, opacity: 0.38,
+      side: THREE.DoubleSide, depthWrite: false,
+    }),
+    blade:    new THREE.MeshStandardMaterial({ color: 0xc8d2dc, roughness: 0.18, metalness: 0.7, envMapIntensity: 1.6 }),
     // koude wangen — klein detail, maar het maakt het gezicht levend
     blush:    new THREE.MeshStandardMaterial({ color: 0xe8a289, roughness: 0.7, envMapIntensity: 0.6 }),
     skin:     P.mat.skin,
@@ -1403,6 +1479,14 @@ export function createRunner(props) {
     P.mesh(P.geo.box, mats.accent, { y: -0.02, sx: 0.66, sy: 0.10, sz: 0.58 }),
   ];
   for (const s of stripes) { s.visible = false; torso.add(s); }
+
+  // borstzakken — alleen zichtbaar bij een safarivest
+  const pockets = [];
+  for (const s of [-1, 1]) {
+    pockets.push(P.mesh(P.geo.box, mats.accent, { x: s * 0.18, y: 0.14, z: 0.26, sx: 0.22, sy: 0.20, sz: 0.06 }));
+    pockets.push(P.mesh(P.geo.box, mats.accent, { x: s * 0.18, y: -0.06, z: 0.25, sx: 0.24, sy: 0.18, sz: 0.06 }));
+  }
+  for (const p of pockets) { p.visible = false; torso.add(p); }
 
   /* ---- kraag en hoofd ----
      Een poolreiziger in een parka heeft geen zichtbare nek: het hoofd
@@ -1465,6 +1549,11 @@ export function createRunner(props) {
     const thigh = P.mesh(P.geo.limb, mats.pants, { y: -0.22, sx: 0.27, sy: 0.22, sz: 0.27 });
     leg.add(thigh);
 
+    // zijzak op de dij — alleen zichtbaar bij een cargobroek
+    const pocket = P.mesh(P.geo.box, mats.accent, { x: s * 0.16, y: -0.24, sx: 0.1, sy: 0.22, sz: 0.3 });
+    pocket.visible = false;
+    leg.add(pocket);
+
     const knee = new THREE.Group();
     knee.position.y = -0.44;
     const kneeBall = P.mesh(P.geo.sphere, mats.pants, { sx: 0.26, sy: 0.26, sz: 0.26 });
@@ -1476,13 +1565,13 @@ export function createRunner(props) {
     knee.add(footMount);
     leg.add(knee);
 
-    leg.userData = { thigh, knee, kneeBall, shin, footMount };
+    leg.userData = { thigh, knee, kneeBall, shin, footMount, pocket };
     torso.add(leg);
     legs.push(leg);
   }
 
   const runner = {
-    group, body, torso, head, arms, legs, mats, stripes, props: P,
+    group, body, torso, head, arms, legs, mats, stripes, pockets, props: P,
     hatMount, glassMount, packMount,
   };
 
@@ -1512,11 +1601,12 @@ export function applyOutfit(runner, outfit) {
   m.shirt.color.setHex(shirt.colors.main);
   m.accent.color.setHex(shirt.colors.accent ?? 0x2b3c55);
   for (const s of runner.stripes) s.visible = shirt.style === 'striped';
+  for (const p of runner.pockets) p.visible = shirt.style === 'vest';
 
   /* -- broek -- */
   m.pants.color.setHex(pants.colors.main);
   for (const leg of runner.legs) {
-    const { thigh, shin, kneeBall } = leg.userData;
+    const { thigh, shin, kneeBall, pocket } = leg.userData;
     const bloot = pants.style === 'shorts';
 
     if (bloot) {
@@ -1529,6 +1619,7 @@ export function applyOutfit(runner, outfit) {
       thigh.scale.set(0.27, 0.22, 0.27);
       thigh.position.y = -0.22;
     }
+    pocket.visible = pants.style === 'cargo';
 
     // bij een korte broek zijn knie en scheen huid in plaats van stof
     shin.material = bloot ? m.skin : m.pants;
@@ -1552,6 +1643,7 @@ export function applyOutfit(runner, outfit) {
   /* -- bril -- */
   m.glass.color.setHex(glasses.colors.main);
   m.glassTrim.color.setHex(glasses.colors.trim ?? glasses.colors.main);
+  m.net.color.setHex(glasses.colors.main);
   refill(runner.glassMount, buildGlasses(P, m, glasses.style));
 
   /* -- rugtas -- */
