@@ -139,8 +139,12 @@ staat in één databestand.
 1. Kopieer `src/levels/antarctica.js` naar bijvoorbeeld `woestijn.js`.
 2. Pas aan:
    * `id`, `name`, `tagline`
-   * `colors` — de hele sfeer hangt hieraan (lucht, grond, ijs, rots, speler)
-   * `fog` en `light` — mist en zonstand
+   * `colors` — de hele sfeer hangt hieraan (lucht, grond, ijs, rots, speler).
+     Let op: `skyLow` moet gelijk zijn aan `fog.color`, anders krijg je een
+     zichtbare naad op de horizon.
+   * `fog` — `color` plus `density` (exponentiële mist; ~0.01 geeft 170 m zicht)
+   * `light` — zonstand en -sterkte. Houd `hemiPower` laag: het zachte licht
+     komt uit de omgevingsmap, niet uit het hemellicht.
    * `speed` — `start`, `max` en `ramp` (over hoeveel meter je naar `max` klimt)
    * `progression` — op welke afstand een nieuwe moeilijkheidstrap opengaat
    * `obstacles` — welke obstakels bestaan en hoe groot hun hitbox is
@@ -198,6 +202,29 @@ onder het hoofddeksel.
 
 Prijzen zijn in credits (= gevangen visjes). Zet `CREDITS_PER_FISH` in
 `src/config.js` hoger als sparen te traag voelt.
+
+## Hoe de belichting werkt
+
+Er zijn geen texturen of modellen op schijf; alles wordt bij het opstarten
+berekend. Drie dingen doen het meeste werk voor de uitstraling:
+
+1. **Omgevingsmap.** `Track.buildEnvironment()` rendert een mini-versie van de
+   lucht (koepel + sneeuwvloer + zon) één keer naar een cubemap en zet die als
+   `scene.environment`. Daardoor vangt ijs de lucht op, krijgen ogen en
+   brillenglazen een lichtpunt en kleurt de onderkant van alles mee met de
+   sneeuw. Zonder dit is alles even mat.
+2. **Normal maps.** `snowSurface()` maakt uit meerdere octaven ruis een
+   hoogteveld en leidt daar een normal map en een roughness map uit af. De
+   sterkte in `normalMapFrom()` moet hoog staan (~18): het hoogteveld is glad,
+   dus het verschil tussen twee buurpixels is minimaal.
+3. **Strak schaduwkader.** De schaduwcamera in `game.js` staat krap om de
+   speler; dezelfde schaduwkaart over een kleiner gebied geeft scherpe randen.
+
+Het vignet is bewust géén post-processing-stap maar een CSS-gradiënt over het
+canvas — dat scheelt een volledige extra render-pass.
+
+De knop **Grafisch: Hoog/Laag** in het menu zet schaduwen, pixelratio,
+sneeuwval en poollicht terug voor tragere machines.
 
 ## Sleutelen aan het gevoel
 

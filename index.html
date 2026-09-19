@@ -15,6 +15,9 @@
 <body>
 <div id="app">
   <canvas id="scene"></canvas>
+  <!-- zachte donkere randen; camera's doen dit ook en het scheelt
+       een volledige post-processing-stap -->
+  <div id="vignette" aria-hidden="true"></div>
 
   <!-- ================= HUD ================= -->
   <div id="hud" hidden>
