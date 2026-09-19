@@ -7,12 +7,12 @@
 
 import { antarctica } from './antarctica.js';
 import { woestijn } from './woestijn.js';
+import { jungle } from './jungle.js';
 
 export const LEVELS = [
   antarctica,
   woestijn,
-  // volgende keer bijvoorbeeld:
-  // jungle,     // level 3 — lianen, moerasgaten, apen
+  jungle,
 ];
 
 export function getLevel(id) {
