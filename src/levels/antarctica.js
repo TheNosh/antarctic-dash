@@ -26,14 +26,18 @@ export const antarctica = {
 
   /* ---------- sfeer ---------- */
   colors: {
-    skyTop: '#07203f',
-    skyMid: '#2f74ab',
-    skyLow: '#f4dcc1',
+    skyTop: '#0b2745',
+    skyMid: '#3f7fb4',
+    skyHaze: '#a9c8de',
+    // moet gelijk zijn aan fog.color, anders zie je een harde naad op
+    // de horizon tussen de vervagende grond en de lucht erachter
+    skyLow: '#d6e5f0',
     ground: 0xdff0ff,
     snowTex: '#eef7ff',
     snow: 0xf4faff,
-    ice: 0x9fe1ff,
-    iceDeep: 0x4fa8d8,
+    // verzadigder dan het wit eromheen, zodat obstakels leesbaar blijven
+    ice: 0x74c8ef,
+    iceDeep: 0x3691c4,
     rock: 0x76828f,
     abyss: 0x03131f,
     hazard: 0xff8a4c,
@@ -43,14 +47,16 @@ export const antarctica = {
     playerDark: 0x2b3c55,
   },
 
-  fog: { color: 0xc3dcf0, near: 50, far: 178 },
+  // exponentiële mist: zicht van ~170 m. Hoger = dichter bij je neus.
+  fog: { color: 0xd6e5f0, density: 0.0105 },
 
   light: {
+    // het hemellicht mag laag: de omgevingsmap levert nu het zachte licht
     hemiSky: 0xbfe0ff,
-    hemiGround: 0x7aa4c8,
-    hemiPower: 0.85,
+    hemiGround: 0x8fb4d2,
+    hemiPower: 0.28,
     sunColor: 0xfff1d8,
-    sunPower: 1.7,
+    sunPower: 2.1,
     sunPos: [-26, 40, -22],
   },
 
