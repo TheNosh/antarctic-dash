@@ -321,6 +321,153 @@ button.primary:active, button.secondary:active { transform: translateY(1px); }
 }
 .link:hover { color: var(--accent); }
 
+/* ------------------------------ Shop ------------------------------ */
+
+/* De shop schuift opzij zodat je je poppetje ziet staan. */
+.shop-screen {
+  backdrop-filter: none;
+  background: linear-gradient(90deg,
+    rgba(3, 9, 18, .10) 0%,
+    rgba(3, 9, 18, .45) 42%,
+    rgba(5, 16, 31, .94) 66%);
+}
+
+@media (min-width: 900px) {
+  .shop-screen { place-items: center end; padding-right: 3vw; }
+}
+@media (max-width: 899px) {
+  .shop-screen {
+    place-items: end center;
+    background: linear-gradient(180deg,
+      rgba(3, 9, 18, .05) 0%,
+      rgba(3, 9, 18, .45) 26%,
+      rgba(5, 16, 31, .95) 46%);
+  }
+}
+
+.panel.shop {
+  width: min(470px, 100%);
+  max-height: min(88vh, 760px);
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  padding: 22px 22px 20px;
+}
+@media (max-width: 899px) {
+  /* ruimte vrijlaten bovenin, daar staat je poppetje */
+  .panel.shop { width: min(580px, 100%); max-height: 58vh; padding: 16px 16px 14px; }
+  .panel.shop .shop-hint { margin-top: 6px; font-size: .72rem; }
+  .panel.shop .tabs { margin: 10px 0 8px; }
+}
+
+.shop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.shop-head .eyebrow { margin: 0 0 2px; }
+.shop-head h2 { margin: 0; }
+
+.purse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-2);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.purse.big {
+  padding: 7px 14px;
+  border: 1px solid var(--edge);
+  border-radius: 99px;
+  background: rgba(0, 0, 0, .3);
+  font-size: 1.15rem;
+}
+
+.shop-hint { margin: 10px 0 0; color: var(--ink-dim); font-size: .78rem; line-height: 1.45; }
+
+.tabs { display: flex; gap: 6px; margin: 14px 0 12px; }
+.tab {
+  flex: 1 1 0;
+  padding: 9px 6px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .22);
+  color: var(--ink-dim);
+  font: 700 .74rem/1.1 system-ui;
+  cursor: pointer;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] {
+  background: rgba(79, 209, 255, .15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.items {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-right: 4px;
+  margin-bottom: 14px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, .24);
+}
+.item.equipped { border-color: var(--accent); background: rgba(79, 209, 255, .11); }
+
+.swatch {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  box-shadow: inset 0 -8px 12px rgba(0, 0, 0, .3);
+}
+.item.locked .swatch { filter: grayscale(.65) brightness(.75); }
+
+.item-body { flex: 1 1 auto; min-width: 0; }
+.item-name { font-weight: 700; font-size: .87rem; }
+.item.locked .item-name { color: var(--ink-dim); }
+.item-note { color: var(--ink-dim); font-size: .72rem; margin-top: 2px; }
+
+.buy {
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 9px;
+  font: 700 .75rem/1 system-ui;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter .12s ease;
+}
+.buy:hover:not(:disabled) { filter: brightness(1.1); }
+.buy.price { background: linear-gradient(135deg, var(--accent), #2f8fd6); color: #04182a; }
+.buy.price:disabled { background: rgba(255, 255, 255, .07); color: var(--ink-dim); cursor: not-allowed; }
+.buy.wear { background: transparent; border: 1px solid var(--edge); color: var(--ink); }
+.buy.on {
+  background: rgba(79, 209, 255, .18);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  cursor: default;
+}
+
+.earned { margin: 10px 0 0; color: var(--accent-2); font-weight: 700; font-size: .9rem; }
+
+button.secondary .purse { margin-left: 8px; font-size: .9em; }
+
 .result {
   display: flex;
   justify-content: space-around;
